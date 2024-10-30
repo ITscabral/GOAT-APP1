@@ -6,56 +6,49 @@ from invoice_generator import generate_invoice, open_invoice
 
 app = Flask(__name__)
 
-# Function to initialize the database and create tables only if they don't exist
+# Function to initialize the database and create tables if they don't exist
 def initialize_db():
-    if not os.path.exists('timesheet.db'):
-        conn = sqlite3.connect('timesheet.db', check_same_thread=False)
-        cursor = conn.cursor()
+    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
+    cursor = conn.cursor()
 
-        # Create users table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                username TEXT PRIMARY KEY,
-                password TEXT NOT NULL,
-                role TEXT NOT NULL,
-                phone_number TEXT
-            )
-        ''')
+    # Create users table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL,
+            phone_number TEXT
+        )
+    ''')
 
-        # Create time_entries table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS time_entries (
-                username TEXT,
-                date TEXT,
-                start_time TEXT,
-                end_time TEXT,
-                FOREIGN KEY (username) REFERENCES users (username)
-            )
-        ''')
+    # Create time_entries table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS time_entries (
+            username TEXT,
+            date TEXT,
+            start_time TEXT,
+            end_time TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
 
-        # Create invoices table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS invoices (
-                invoice_number INTEGER PRIMARY KEY,
-                username TEXT,
-                date TEXT,
-                total_hours REAL,
-                total_payment REAL,
-                filename TEXT,
-                FOREIGN KEY (username) REFERENCES users (username)
-            )
-        ''')
+    # Create invoices table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS invoices (
+            invoice_number INTEGER PRIMARY KEY,
+            username TEXT,
+            date TEXT,
+            total_hours REAL,
+            total_payment REAL,
+            filename TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
 
-        # Insert default admin user if not exists
-        cursor.execute('''
-            INSERT OR IGNORE INTO users (username, password, role, phone_number)
-            VALUES ('admin', '123', 'admin', '0123456789')
-        ''')
+    conn.commit()
+    conn.close()
 
-        conn.commit()
-        conn.close()
-
-# Call the initialization function (will only create tables if they don't exist)
+# Call the initialization function
 initialize_db()
 
 def get_db_connection():
@@ -75,8 +68,13 @@ def login():
         return jsonify({'message': 'Username and password are required'}), 400
 
     conn = get_db_connection()
-    user = conn.execute('SELECT * FROM users WHERE LOWER(username) = ?', (username,)).fetchone()
+    try:
+        user = conn.execute('SELECT * FROM users WHERE LOWER(username) = ?', (username,)).fetchone()
+    except sqlite3.OperationalError as e:
+        return jsonify({'error': f"Database error: {e}. Please check your database structure."}), 500
+
     conn.close()
+
     if user and user['password'] == password:
         if user['role'] == 'admin':
             return redirect(url_for('admin_dashboard'))
@@ -88,10 +86,10 @@ def login():
 def admin_dashboard():
     conn = get_db_connection()
     teams = {
-        "Team 1": ["Jackson Carneiro", "Lucas Cabral"],
-        "Team 2": ["Bruno Vianello", "Thallys Carvalho"],
-        "Team 3": ["Michel Silva", "Giulliano Cabral"],
-        "Team 4": ["Pedro Cadenas", "Caio Henrique"],
+        "Team 1": ["jackson_carneiro", "lucas_cabral"],
+        "Team 2": ["bruno_vianello", "thallys_carvalho"],
+        "Team 3": ["michel_silva", "giulliano_cabral"],
+        "Team 4": ["pedro_cadenas", "caio_henrique"],
     }
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
