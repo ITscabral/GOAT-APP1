@@ -83,11 +83,11 @@
     <h3>Invoice Actions</h3>
     <form action="/generate_invoice" method="POST" class="d-inline">
         <input type="hidden" name="username" value="{{ username }}">
-        <button type="submit" class="btn btn-primary" id="generateInvoiceBtn">Generate Invoice</button>
+        <button type="submit" class="btn btn-primary">Generate Invoice</button>
     </form>
     <form action="/send_invoice" method="POST" class="d-inline">
         <input type="hidden" name="username" value="{{ username }}">
-        <button type="submit" class="btn btn-secondary" id="sendInvoiceBtn" {% if not invoice_generated %}disabled{% endif %}>Send Invoice</button>
+        <button type="submit" class="btn btn-secondary" id="sendInvoiceButton" disabled>Send Invoice</button>
     </form>
 </div>
 
