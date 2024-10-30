@@ -151,7 +151,7 @@ def generate_invoice_route():
 
 @app.route('/open_invoice/<filename>')
 def open_invoice(filename):
-    filepath = os.path.join(os.path.expanduser("~"), "Desktop", filename)
+    filepath = os.path.join(os.getcwd(), "invoices", filename)
     if os.path.exists(filepath):
         try:
             return send_file(filepath, as_attachment=False)
