@@ -81,34 +81,56 @@
     <!-- Invoice Actions -->
     <div id="invoiceActions" class="mt-5">
         <h3>Invoice Actions</h3>
-        <form action="/generate_invoice" method="POST" id="generateInvoiceForm" class="d-inline">
+        <form id="generateInvoiceForm" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" class="btn btn-primary" id="generateInvoiceButton">Generate & View Invoice</button>
+            <button type="button" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
         </form>
-        <form action="/send_invoice" method="POST" id="sendInvoiceForm" class="d-inline">
+        <form id="sendInvoiceForm" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
             <input type="hidden" name="invoice_number" id="invoiceNumber">
-            <button type="submit" class="btn btn-secondary" id="sendInvoiceButton" disabled>Send Invoice</button>
+            <button type="button" id="sendInvoiceButton" class="btn btn-secondary" disabled>Send Invoice</button>
         </form>
     </div>
 </div>
 
 <script>
-    document.getElementById("generateInvoiceForm").onsubmit = function(event) {
-        event.preventDefault(); // Prevent the default submission to handle it via JavaScript
+    document.getElementById("generateInvoiceButton").onclick = function() {
+        const form = document.getElementById("generateInvoiceForm");
+        const formData = new FormData(form);
 
-        fetch(this.action, {
+        fetch('/generate_invoice', {
             method: 'POST',
-            body: new FormData(this)
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 document.getElementById("sendInvoiceButton").disabled = false;
+                document.getElementById("sendInvoiceButton").classList.remove("btn-secondary");
+                document.getElementById("sendInvoiceButton").classList.add("btn-success");
                 document.getElementById("invoiceNumber").value = data.invoice_number;
                 alert("Invoice generated successfully!");
             } else {
                 alert("Error generating invoice: " + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    };
+
+    document.getElementById("sendInvoiceButton").onclick = function() {
+        const form = document.getElementById("sendInvoiceForm");
+        const formData = new FormData(form);
+
+        fetch('/send_invoice', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.message) {
+                alert(data.message);
+            } else {
+                alert("Error sending invoice: " + data.error);
             }
         })
         .catch(error => console.error('Error:', error));
