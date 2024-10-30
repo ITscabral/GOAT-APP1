@@ -6,14 +6,6 @@ from invoice_generator import generate_invoice, open_invoice
 
 app = Flask(__name__)
 
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
-import sqlite3
-import os
-from datetime import datetime, timedelta
-from invoice_generator import generate_invoice, open_invoice
-
-app = Flask(__name__)
-
 # Function to initialize the database and create tables if they don't exist
 def initialize_db():
     conn = sqlite3.connect('timesheet.db', check_same_thread=False)
@@ -52,6 +44,12 @@ def initialize_db():
             FOREIGN KEY (username) REFERENCES users (username)
         )
     ''')
+
+    # Insert default admin user if table is empty
+    cursor.execute("SELECT COUNT(*) FROM users")
+    if cursor.fetchone()[0] == 0:
+        cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ('admin', '123', 'admin'))
+        cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ('employee1', '123', 'employee'))
 
     conn.commit()
     conn.close()
