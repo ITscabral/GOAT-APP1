@@ -117,6 +117,9 @@ def add_time_entry():
 def generate_invoice_route():
     username = request.form.get('username')
 
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+
     # Fetch time entries for this employee
     conn = get_db_connection()
     entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
@@ -133,8 +136,11 @@ def generate_invoice_route():
     conn.close()
 
     # Generate Invoice PDF
+    target_directory = os.path.join(os.getcwd(), "invoices")
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
     filename = f"invoice_{username}_{invoice_number}.pdf"
-    filepath = os.path.join(os.path.expanduser("~"), "Desktop", filename)
+    filepath = os.path.join(target_directory, filename)
 
     # Use your existing `generate_invoice` function to create the PDF
     generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
@@ -147,7 +153,11 @@ def generate_invoice_route():
     conn.close()
 
     # Open PDF in Browser
-    return redirect(url_for('open_invoice', filename=filename))
+    if os.path.exists(filepath):
+        return redirect(url_for('open_invoice', filename=filename))
+    else:
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
 
 @app.route('/open_invoice/<filename>')
 def open_invoice(filename):
