@@ -8,3 +8,4 @@ echo "*.log" >> .gitignore
 echo ".idea/" >> .gitignore
 echo "*.iml" >> .gitignore
 echo "*.swp" >> .gitignore
+.env 
