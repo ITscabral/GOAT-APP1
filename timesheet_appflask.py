@@ -32,6 +32,7 @@ def login():
             return redirect(url_for('employee_dashboard', username=user['username']))
     return jsonify({'message': 'Invalid credentials'}), 401
 
+
 @app.route('/admin_dashboard')
 def admin_dashboard():
     conn = get_db_connection()
@@ -44,7 +45,14 @@ def admin_dashboard():
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
-    invoices = conn.execute('SELECT * FROM invoices').fetchall()
+
+    # Join invoices with users to get employee names
+    invoices = conn.execute('''
+        SELECT invoices.*, users.username as employee_name
+        FROM invoices
+        JOIN users ON invoices.username = users.username
+    ''').fetchall()
+
     conn.close()
 
     employee_list = []
@@ -63,17 +71,18 @@ def admin_dashboard():
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
+            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'],
+                                                                                                    "%H:%M") - timedelta(
+                minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
 
     # Include the employee's name in the invoices list
     invoice_list = []
     for invoice in invoices:
-        employee_name = next((emp['username'] for emp in employees if emp['username'] == invoice['username']), 'Unknown')
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': employee_name,
+            'username': invoice['employee_name'],
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
