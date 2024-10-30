@@ -1,8 +1,11 @@
 from twilio.rest import Client
+from dotenv import load_dotenv
+import os
 
-TWILIO_ACCOUNT_SID = 'your_account_sid'
-TWILIO_AUTH_TOKEN = 'your_auth_token'
-TWILIO_PHONE_NUMBER = '+1234567890'
+load_dotenv()  # Load environment variables from the .env file
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
+TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
 
 def send_sms(to_number, message):
     """Send an SMS via Twilio."""
