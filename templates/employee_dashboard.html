@@ -77,6 +77,19 @@
             </tbody>
         </table>
     </div>
+
+    <!-- Invoice Actions -->
+    <div id="invoiceActions" class="mt-5">
+        <h3>Invoice Actions</h3>
+        <form action="/generate_invoice" method="POST" class="d-inline">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit" class="btn btn-primary">Generate Invoice</button>
+        </form>
+        <form action="/send_invoice" method="POST" class="d-inline">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit" class="btn btn-secondary">Send Invoice</button>
+        </form>
+    </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
