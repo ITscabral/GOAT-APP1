@@ -81,16 +81,39 @@
     <!-- Invoice Actions -->
     <div id="invoiceActions" class="mt-5">
         <h3>Invoice Actions</h3>
-        <form action="/generate_invoice" method="POST" class="d-inline">
+        <form action="/generate_invoice" method="POST" id="generateInvoiceForm" class="d-inline">
             <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" class="btn btn-primary">Generate & View Invoice</button>
+            <button type="submit" class="btn btn-primary" id="generateInvoiceButton">Generate & View Invoice</button>
         </form>
-        <form action="/send_invoice" method="POST" class="d-inline">
+        <form action="/send_invoice" method="POST" id="sendInvoiceForm" class="d-inline">
             <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" class="btn btn-secondary" id="sendInvoiceButton" {% if not invoice_generated %}disabled{% endif %}>Send Invoice</button>
+            <input type="hidden" name="invoice_number" id="invoiceNumber">
+            <button type="submit" class="btn btn-secondary" id="sendInvoiceButton" disabled>Send Invoice</button>
         </form>
     </div>
 </div>
+
+<script>
+    document.getElementById("generateInvoiceForm").onsubmit = function(event) {
+        event.preventDefault(); // Prevent the default submission to handle it via JavaScript
+
+        fetch(this.action, {
+            method: 'POST',
+            body: new FormData(this)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById("sendInvoiceButton").disabled = false;
+                document.getElementById("invoiceNumber").value = data.invoice_number;
+                alert("Invoice generated successfully!");
+            } else {
+                alert("Error generating invoice: " + data.error);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    };
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
