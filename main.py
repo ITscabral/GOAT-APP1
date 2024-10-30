@@ -1,3 +1,4 @@
+import os
 import tkinter as tk
 
 from dotenv import load_dotenv
