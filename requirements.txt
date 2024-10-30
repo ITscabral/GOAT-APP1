@@ -4,3 +4,8 @@ pygame==2.5.2
 tbb==2021.13.0
 trampoline==0.1.2
 waitress==3.0.1
+
+twilio~=9.3.4
+tkcalendar~=1.6.1
+reportlab~=4.2.5
+Flask~=3.0.3
