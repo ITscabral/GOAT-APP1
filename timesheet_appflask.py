@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 import sqlite3
 import os
 from datetime import datetime, timedelta
+from invoice_generator import generate_invoice, open_invoice
 
 app = Flask(__name__)
 
@@ -111,6 +112,42 @@ def add_time_entry():
         return redirect(url_for('employee_dashboard', username=username))
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/generate_invoice', methods=['POST'])
+def generate_invoice_route():
+    username = request.form.get('username')
+
+    # Fetch time entries for this employee
+    conn = get_db_connection()
+    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
+    conn.close()
+
+    timesheet_data = [(entry['date'], entry['start_time'], entry['end_time'],
+                       round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+                      for entry in entries]
+    total_hours = sum(entry[3] for entry in timesheet_data)
+
+    # Generate Invoice Number
+    conn = get_db_connection()
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
+    conn.close()
+
+    # Generate Invoice PDF
+    filename = f"invoice_{username}_{invoice_number}.pdf"
+    filepath = os.path.join(os.path.expanduser("~"), "Desktop", filename)
+
+    # Use your existing `generate_invoice` function to create the PDF
+    generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
+
+    # Save Invoice Metadata
+    conn = get_db_connection()
+    conn.execute('INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+                 (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename))
+    conn.commit()
+    conn.close()
+
+    # Open PDF in Browser
+    return redirect(url_for('open_invoice', filename=filename))
 
 @app.route('/open_invoice/<filename>')
 def open_invoice(filename):

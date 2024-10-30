@@ -1,4 +1,5 @@
 import os
+import subprocess
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -87,6 +88,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
     except Exception as e:
         print(f"[ERROR] Invoice generation failed: {e}")
         return None
+
 def open_invoice(filename):
     """Open the generated PDF invoice using the native system viewer."""
     try:
@@ -100,7 +102,10 @@ def open_invoice(filename):
         if os.name == 'nt':  # Windows
             os.startfile(filename)
         elif os.name == 'posix':  # macOS/Linux
-            subprocess.run(['open' if os.uname().sysname == 'Darwin' else 'xdg-open', filename], check=True)
+            if 'Darwin' in os.uname().sysname:  # macOS
+                subprocess.run(['open', filename], check=True)
+            else:  # Linux
+                subprocess.run(['xdg-open', filename], check=True)
         else:
             raise OSError("Unsupported operating system.")
 
