@@ -175,6 +175,7 @@ def generate_invoice_route():
         if not entries:
             return jsonify({'error': 'No time entries found for this user'}), 400
 
+        # Prepare timesheet data
         timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'],
@@ -190,48 +191,35 @@ def generate_invoice_route():
         conn.close()
 
         # Generate Invoice PDF
+        target_directory = os.path.join(os.getcwd(), "invoices")
+        if not os.path.exists(target_directory):
+            os.makedirs(target_directory)
+        filename = f"Invoice_{invoice_number}_{username}.pdf"
+        filepath = os.path.join(target_directory, filename)
+
+        # Use your existing `generate_invoice` function to create the PDF
         result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
 
         # Validate if the file was created
         if result_filepath is None or not os.path.exists(result_filepath):
             return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
+        # Save Invoice Metadata to Database
+        try:
+            conn = get_db_connection()
+            conn.execute(
+                'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+                (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
+            )
+            conn.commit()
+            conn.close()
+        except sqlite3.Error as e:
+            return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
+
         # Return a success response with the invoice number
         return jsonify({'success': True, 'invoice_number': invoice_number})
 
-    # Updated /send_invoice Route
-    @app.route('/send_invoice', methods=['POST'])
-    def send_invoice():
-        username = request.form.get('username')
-        invoice_number = request.form.get('invoice_number')
-
-        if not username or not invoice_number:
-            return jsonify({'error': 'Username and Invoice number are required'}), 400
-
-        # Fetch invoice filename from database
-        conn = get_db_connection()
-        invoice = conn.execute('SELECT filename FROM invoices WHERE invoice_number = ? AND username = ?',
-                               (invoice_number, username)).fetchone()
-
-        if not invoice:
-            conn.close()
-            return jsonify({'error': 'Invoice not found'}), 404
-
-        filepath = os.path.join(os.getcwd(), "invoices", invoice['filename'])
-        if os.path.exists(filepath):
-            # Update invoice as "sent" in database for admin visibility
-            try:
-                conn.execute('UPDATE invoices SET sent = 1 WHERE invoice_number = ?', (invoice_number,))
-                conn.commit()
-                conn.close()
-                return jsonify({'message': 'Invoice sent successfully!'}), 200
-            except sqlite3.Error as e:
-                return jsonify({'error': str(e)}), 500
-        else:
-            conn.close()
-            return jsonify({'error': 'Invoice file not found'}), 404
-
-    if __name__ == '__main__':
+    if __name__ == "__main__":
         app.run(debug=True, host='0.0.0.0', port=5000)
 
 @app.route('/open_invoice/<filename>')
