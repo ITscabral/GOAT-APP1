@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
 import sqlite3
 import os
@@ -186,7 +185,7 @@ def add_employee():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-=======
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file
 import sqlite3
 import os
@@ -374,4 +373,3 @@ def add_employee():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
->>>>>>> 090ad36 (Initial commit with Flask app and requirements)
