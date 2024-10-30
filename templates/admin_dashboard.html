@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 2em;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        table {
+            width: 100%;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="text-center">Admin Dashboard</h1>
+
+    <!-- Team and Employee Selection -->
+    <div class="mt-5">
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <label for="teamSelect">Select Team:</label>
+                <select id="teamSelect" class="form-control" onchange="filterByTeam()">
+                    <option value="">All Teams</option>
+                    {% for team in teams %}
+                    <option value="{{ team }}">{{ team }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label for="employeeSelect">Select Employee:</label>
+                <select id="employeeSelect" class="form-control" onchange="filterByEmployee()">
+                    <option value="">All Employees</option>
+                    {% for employee in employees %}
+                    <option value="{{ employee.username }}">{{ employee.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Time Entries -->
+    <div id="timeEntriesSection">
+        <h2>Time Entries</h2>
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Username</th>
+                <th>Date</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Total Hours</th>
+            </tr>
+            </thead>
+            <tbody id="timeEntriesTable">
+            {% for employee in employees %}
+                {% set has_entries = false %}
+                {% for entry in entries %}
+                    {% if entry.username == employee.username %}
+                    {% set has_entries = true %}
+                    <tr class="entryRow" data-username="{{ entry.username }}" data-team="{{ employee.team }}">
+                        <td>{{ entry.username }}</td>
+                        <td>{{ entry.date }}</td>
+                        <td>{{ entry.start_time }}</td>
+                        <td>{{ entry.end_time }}</td>
+                        <td>{{ entry.total_hours }}</td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Previous Invoices -->
+    <div id="invoicesSection" class="mt-5">
+        <h2>Previous Invoices</h2>
+        <table class="table table-striped">
+            <thead>
+            <tr>
+                <th>Invoice #</th>
+                <th>Date</th>
+                <th>Total Hours</th>
+                <th>Total Payment</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody id="invoicesTable">
+            {% for invoice in invoices %}
+                {% for employee in employees %}
+                    {% if invoice.username == employee.username %}
+                    <tr class="invoiceRow" data-username="{{ invoice.username }}" data-team="{{ employee.team }}">
+                        <td>{{ invoice.invoice_number }}</td>
+                        <td>{{ invoice.date }}</td>
+                        <td>{{ invoice.total_hours }}</td>
+                        <td>{{ invoice.total_payment }}</td>
+                        <td><a href="{{ url_for('open_invoice', filename=invoice.filename) }}" class="btn btn-primary">Open</a></td>
+                    </tr>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Add New Employee Form -->
+    <div id="addEmployeeSection" class="mt-5">
+        <h2>Add New Employee</h2>
+        <form action="/add_employee" method="POST">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" class="form-control" id="name" name="name" required>
+            </div>
+            <div class="form-group">
+                <label for="role">Main Role:</label>
+                <select class="form-control" id="role" name="role">
+                    <option value="Driver">Driver</option>
+                    <option value="Offsider">Offsider</option>
+                    <option value="Dock Receiver">Dock Receiver</option>
+                    <option value="One-Day Labour">One-Day Labour</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="rate">Rate per Hour:</label>
+                <input type="number" class="form-control" id="rate" name="rate" required>
+            </div>
+            <div class="form-group">
+                <label for="abn">ABN:</label>
+                <input type="text" class="form-control" id="abn" name="abn" required>
+            </div>
+            <div class="form-group">
+                <label for="phone_number">Phone Number:</label>
+                <input type="text" class="form-control" id="phone_number" name="phone_number" required>
+            </div>
+            <button type="submit" class="btn btn-success">Add Employee</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function filterByTeam() {
+        const selectedTeam = document.getElementById("teamSelect").value;
+        const rows = document.querySelectorAll(".entryRow, .invoiceRow");
+        rows.forEach(row => {
+            if (selectedTeam === "" || row.getAttribute("data-team") === selectedTeam) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+    function filterByEmployee() {
+        const selectedEmployee = document.getElementById("employeeSelect").value;
+        const rows = document.querySelectorAll(".entryRow, .invoiceRow");
+        rows.forEach(row => {
+            if (selectedEmployee === "" || row.getAttribute("data-username") === selectedEmployee) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

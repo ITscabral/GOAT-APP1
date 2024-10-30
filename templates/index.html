@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timesheet App - GOAT Removals</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 2em;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1 class="text-center">GOAT Removals Timesheet Application</h1>
+
+    <!-- Login Form -->
+    <div id="loginForm" class="mt-5">
+        <h3>Login</h3>
+        <form id="login-form" method="POST" action="/login">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Login</button>
+            <button type="button" class="btn btn-link" onclick="showResetForm()">Forgot Password?</button>
+        </form>
+    </div>
+
+    <!-- Password Reset Form -->
+    <div id="resetForm" class="mt-5" style="display: none;">
+        <h3>Reset Password</h3>
+        <form id="reset-password-form" method="POST" action="/reset_password">
+            <div class="form-group">
+                <label for="username-reset">Username</label>
+                <input type="text" class="form-control" id="username-reset" name="username" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Send Reset Token</button>
+            <button type="button" class="btn btn-link" onclick="showLoginForm()">Back to Login</button>
+        </form>
+    </div>
+
+    <!-- Time Entry Form -->
+    <div id="timeEntryForm" class="mt-5" style="display: none;">
+        <h3>Time Entry</h3>
+        <form id="time-entry-form" method="POST" action="/time_entries">
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input type="date" class="form-control" id="date" name="date" required>
+            </div>
+            <div class="form-group">
+                <label for="start_time">Start Time</label>
+                <input type="time" class="form-control" id="start_time" name="start_time" required>
+            </div>
+            <div class="form-group">
+                <label for="end_time">End Time</label>
+                <input type="time" class="form-control" id="end_time" name="end_time" required>
+            </div>
+            <button type="submit" class="btn btn-success">Save Time Entry</button>
+        </form>
+    </div>
+
+    <!-- Invoice Section -->
+    <div id="invoiceSection" class="mt-5" style="display: none;">
+        <h3>Generate Invoice</h3>
+        <form id="generate-invoice-form" method="POST" action="/generate_invoice">
+            <div class="form-group">
+                <label for="invoice_number">Invoice Number</label>
+                <input type="text" class="form-control" id="invoice_number" name="invoice_number" required>
+            </div>
+            <div class="form-group">
+                <label for="employee_name">Employee Name</label>
+                <input type="text" class="form-control" id="employee_name" name="employee_name" required>
+            </div>
+            <div class="form-group">
+                <label for="total_hours">Total Hours Worked</label>
+                <input type="number" class="form-control" id="total_hours" name="total_hours" required>
+            </div>
+            <div class="form-group">
+                <label for="hourly_rate">Hourly Rate</label>
+                <input type="number" class="form-control" id="hourly_rate" name="hourly_rate" required>
+            </div>
+            <button type="submit" class="btn btn-warning">Generate Invoice</button>
+        </form>
+    </div>
+</div>
+
+<script>
+    function showResetForm() {
+        document.getElementById("loginForm").style.display = "none";
+        document.getElementById("resetForm").style.display = "block";
+    }
+
+    function showLoginForm() {
+        document.getElementById("resetForm").style.display = "none";
+        document.getElementById("loginForm").style.display = "block";
+    }
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
