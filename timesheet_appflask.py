@@ -113,50 +113,89 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/generate_invoice', methods=['POST'])
-def generate_invoice_route():
-    username = request.form.get('username')
+def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
+    """Generate a professional PDF invoice."""
 
-    if not username:
-        return jsonify({'error': 'Username is required'}), 400
-
-    # Fetch time entries for this employee
-    conn = get_db_connection()
-    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
-    conn.close()
-
-    timesheet_data = [(entry['date'], entry['start_time'], entry['end_time'],
-                       round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
-                      for entry in entries]
-    total_hours = sum(entry[3] for entry in timesheet_data)
-
-    # Generate Invoice Number
-    conn = get_db_connection()
-    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
-    conn.close()
-
-    # Generate Invoice PDF
+    # Step 1: Define the specific folder path
     target_directory = os.path.join(os.getcwd(), "invoices")
+    print(f"[INFO] Target directory: {target_directory}")
+
+    # Step 2: Ensure the directory exists
     if not os.path.exists(target_directory):
+        print("[INFO] Directory does not exist, creating it...")
         os.makedirs(target_directory)
-    filename = f"invoice_{username}_{invoice_number}.pdf"
-    filepath = os.path.join(target_directory, filename)
 
-    # Use your existing `generate_invoice` function to create the PDF
-    generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
+    # Step 3: Create the filename with the full path
+    filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
+    print(f"[INFO] Full path to invoice: {filename}")
 
-    # Save Invoice Metadata
-    conn = get_db_connection()
-    conn.execute('INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
-                 (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename))
-    conn.commit()
-    conn.close()
+    try:
+        # Initialize PDF canvas
+        print(f"[INFO] Generating PDF at {filename}")
+        c = canvas.Canvas(filename, pagesize=A4)
 
-    # Open PDF in Browser
-    if os.path.exists(filepath):
-        return redirect(url_for('open_invoice', filename=filename))
-    else:
-        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+        # Optional: Add a logo if it exists
+        logo_path = "company_logo.png"
+        if os.path.exists(logo_path):
+            c.drawImage(logo_path, 30, 770, width=120, height=80)
+        else:
+            print("[WARNING] Logo not found, skipping.")
+
+        # Add Company Info
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(150, 800, company_info.get("Company Name", "GOAT Removals"))
+        c.setFont("Helvetica", 10)
+        c.drawString(150, 780, company_info.get("Address", "123 Business St, Sydney, Australia"))
+        c.drawString(150, 765, f"Phone: {company_info.get('Phone', '+61 2 1234 5678')}")
+
+        # Add Invoice Header
+        c.setFont("Helvetica-Bold", 16)
+        c.drawString(230, 720, f"Invoice #{invoice_number}")
+
+        # Add Employee Name and Date
+        date_generated = datetime.now().strftime('%Y-%m-%d %A')
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(30, 690, f"Employee: {employee_name}")
+        c.setFont("Helvetica", 10)
+        c.drawString(30, 670, f"Date Generated: {date_generated}")
+
+        # Add Table Data
+        y = 640
+        for entry in timesheet_data:
+            date, start, end, hours = entry
+            weekday = datetime.strptime(date, "%Y-%m-%d").strftime('%A')
+            c.setFont("Helvetica", 10)
+            c.drawString(30, y, f"{date} ({weekday})")
+            c.drawString(150, y, start)
+            c.drawString(250, y, end)
+            c.drawString(350, y, f"{hours:.2f}")
+            y -= 20
+
+        # Summary and Footer
+        total_payment = total_hours * hourly_rate
+        c.setFont("Helvetica-Bold", 12)
+        c.drawString(30, y - 30, f"Total Hours: {total_hours:.2f}")
+        c.drawString(30, y - 50, f"Hourly Rate: ${hourly_rate:.2f}")
+        c.drawString(30, y - 70, f"Total Payment: ${total_payment:.2f}")
+
+        c.setFont("Helvetica", 8)
+        c.setFillColor(colors.grey)
+        c.drawString(30, 50, "Thank you for your work! If you have any questions, contact our office.")
+
+        # Save the PDF
+        c.save()
+        print(f"[SUCCESS] PDF saved at {filename}")
+
+        # Validate the file exists after saving
+        if os.path.exists(filename):
+            print(f"[INFO] File exists: {filename}")
+            return filename
+        else:
+            raise FileNotFoundError(f"File not found at: {filename}")
+
+    except Exception as e:
+        print(f"[ERROR] Invoice generation failed: {e}")
+        return None
 
 
 @app.route('/open_invoice/<filename>')
