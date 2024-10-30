@@ -42,17 +42,25 @@ class TimesheetApp:
         """Handle user login."""
         username = self.username_entry.get()
         password = self.password_entry.get()
-        user = self.db.query("SELECT role FROM users WHERE username = ? AND password = ?", (username, password))
-
-        if user:
-            role = user[0][0]
-            # Determine which dashboard to open based on user role
-            if role == 'admin':
-                AdminDashboard(self.root, self.db)
-            elif role == 'employee':
-                EmployeeDashboard(self.root, self.db, username)
-        else:
-            messagebox.showerror("Login Failed", "Invalid credentials!")
+        
+        # Debugging to check inputs
+        print(f"Login attempt with Username: {username} and Password: {password}")
+        
+        try:
+            user = self.db.query("SELECT role FROM users WHERE username = ? AND password = ?", (username, password))
+            if user:
+                role = user[0][0]
+                # Determine which dashboard to open based on user role
+                if role == 'admin':
+                    AdminDashboard(self.root, self.db)
+                elif role == 'employee':
+                    EmployeeDashboard(self.root, self.db, username)
+            else:
+                print("Invalid credentials")
+                messagebox.showerror("Login Failed", "Invalid credentials!")
+        except Exception as e:
+            print(f"Exception during login: {e}")
+            messagebox.showerror("Error", "An error occurred during login.")
 
     def clear_window(self):
         """Clear the current window of widgets."""
