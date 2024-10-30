@@ -223,6 +223,14 @@ def add_employee():
         return jsonify({'message': 'Employee added successfully!'}), 201
     except sqlite3.IntegrityError:
         return jsonify({'error': 'Employee with this username already exists!'}), 400
+from flask import send_file  # Add this import at the top of your file
 
+# Add this route somewhere below your existing routes:
+@app.route('/download_timesheet_db')
+def download_timesheet_db():
+    try:
+        return send_file('timesheet.db', as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
