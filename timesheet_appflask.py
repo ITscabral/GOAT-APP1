@@ -120,9 +120,7 @@ def admin_dashboard():
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'],
-                                                                                                    "%H:%M") - timedelta(
-                minutes=30)).seconds / 3600.0, 2)
+            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
 
