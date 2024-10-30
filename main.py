@@ -1,4 +1,7 @@
 import tkinter as tk
+
+from dotenv import load_dotenv
+
 from admin_dashboard import AdminDashboard
 from employee_dashboard import EmployeeDashboard
 from database import Database
@@ -107,9 +110,12 @@ class TimesheetApp:
     def send_sms(self, to_number, message):
         """Send an SMS using Twilio."""
         from twilio.rest import Client
-        TWILIO_ACCOUNT_SID = 'REDACTED'
-        TWILIO_AUTH_TOKEN = 'REDACTED'
-        TWILIO_PHONE_NUMBER = 'REDACTED'
+        load_dotenv()  # Load the environment variables from the .env file
+
+        # Twilio credentials
+        TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+        TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+        TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
         try:
             client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)

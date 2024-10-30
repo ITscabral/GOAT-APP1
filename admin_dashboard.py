@@ -1,15 +1,18 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
-from datetime import datetime, timedelta
+import os
 import subprocess  # For native PDF opening
+import tkinter as tk
+from datetime import datetime, timedelta
+from tkinter import ttk, messagebox
+
+from dotenv import load_dotenv
 from twilio.rest import Client  # Twilio for SMS notifications
-import os  # To check file existence
-from invoice_generator import generate_invoice, open_invoice  # Import your invoice functions
+
+load_dotenv()  # Load the environment variables from the .env file
 
 # Twilio credentials
-TWILIO_ACCOUNT_SID = 'REDACTED'
-TWILIO_AUTH_TOKEN = 'REDACTED'
-TWILIO_PHONE_NUMBER = 'REDACTED'
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
+TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
 
 class AdminDashboard:
