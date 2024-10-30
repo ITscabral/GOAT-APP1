@@ -6,55 +6,56 @@ from invoice_generator import generate_invoice, open_invoice
 
 app = Flask(__name__)
 
-# Function to initialize the database and create tables if they don't exist
+# Function to initialize the database and create tables only if they don't exist
 def initialize_db():
-    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
-    cursor = conn.cursor()
+    if not os.path.exists('timesheet.db'):
+        conn = sqlite3.connect('timesheet.db', check_same_thread=False)
+        cursor = conn.cursor()
 
-    # Create users table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL,
-            phone_number TEXT
-        )
-    ''')
+        # Create users table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                phone_number TEXT
+            )
+        ''')
 
-    # Create time_entries table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS time_entries (
-            username TEXT,
-            date TEXT,
-            start_time TEXT,
-            end_time TEXT,
-            FOREIGN KEY (username) REFERENCES users (username)
-        )
-    ''')
+        # Create time_entries table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS time_entries (
+                username TEXT,
+                date TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                FOREIGN KEY (username) REFERENCES users (username)
+            )
+        ''')
 
-    # Create invoices table
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS invoices (
-            invoice_number INTEGER PRIMARY KEY,
-            username TEXT,
-            date TEXT,
-            total_hours REAL,
-            total_payment REAL,
-            filename TEXT,
-            FOREIGN KEY (username) REFERENCES users (username)
-        )
-    ''')
+        # Create invoices table
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS invoices (
+                invoice_number INTEGER PRIMARY KEY,
+                username TEXT,
+                date TEXT,
+                total_hours REAL,
+                total_payment REAL,
+                filename TEXT,
+                FOREIGN KEY (username) REFERENCES users (username)
+            )
+        ''')
 
-    # Insert default admin user if table is empty
-    cursor.execute("SELECT COUNT(*) FROM users")
-    if cursor.fetchone()[0] == 0:
-        cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ('admin', '123', 'admin'))
-        cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ('employee1', '123', 'employee'))
+        # Insert default admin user if not exists
+        cursor.execute('''
+            INSERT OR IGNORE INTO users (username, password, role, phone_number)
+            VALUES ('admin', '123', 'admin', '0123456789')
+        ''')
 
-    conn.commit()
-    conn.close()
+        conn.commit()
+        conn.close()
 
-# Call the initialization function
+# Call the initialization function (will only create tables if they don't exist)
 initialize_db()
 
 def get_db_connection():
