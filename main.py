@@ -2,6 +2,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 import uuid
+import sqlite3
 
 from dotenv import load_dotenv
 from admin_dashboard import AdminDashboard
@@ -47,7 +48,7 @@ class TimesheetApp:
         print(f"Login attempt with Username: {username} and Password: {password}")
         
         try:
-            user = self.db.query("SELECT role FROM users WHERE username = ? AND password = ?", (username, password))
+            user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
             if user:
                 role = user[0][0]
                 # Determine which dashboard to open based on user role
@@ -58,7 +59,7 @@ class TimesheetApp:
             else:
                 print("Invalid credentials")
                 messagebox.showerror("Login Failed", "Invalid credentials!")
-        except Exception as e:
+        except sqlite3.Error as e:
             print(f"Exception during login: {e}")
             messagebox.showerror("Error", "An error occurred during login.")
 
@@ -77,7 +78,7 @@ class TimesheetApp:
     def send_reset_token(self):
         """Handle sending of the password reset token via SMS."""
         username = self.username_entry.get()
-        user = self.db.query("SELECT phone_number FROM users WHERE username = ?", (username,))
+        user = self.db.query("SELECT phone_number FROM users WHERE LOWER(username) = ?", (username.lower(),))
 
         if user and user[0][0]:
             phone_number = str(user[0][0]).strip()
@@ -89,7 +90,7 @@ class TimesheetApp:
 
             # Generate and store reset token
             token = uuid.uuid4().hex[:8]
-            self.db.execute("UPDATE users SET reset_token = ? WHERE username = ?", (token, username))
+            self.db.execute("UPDATE users SET reset_token = ? WHERE LOWER(username) = ?", (token, username.lower()))
             # Send SMS with the token
             self.send_sms(phone_number, f"Your password reset token is: {token}")
             messagebox.showinfo("Success", "Reset token sent via SMS.")
