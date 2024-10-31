@@ -32,37 +32,39 @@ class TimesheetApp:
         setattr(self, f"{label.lower()}_entry", entry)  # Set the entry field to an instance variable
 
     def login(self):
-        """Handle user login."""
-        # Normalize input username to lowercase and remove spaces
-        input_username = self.username_entry.get().strip().lower().replace(" ", "")
-        input_password = self.password_entry.get()
+    """Handle user login with normalized username."""
+    # Normalize input username by removing spaces and converting to lowercase
+    input_username = self.username_entry.get().strip().lower().replace(" ", "")
+    input_password = self.password_entry.get()
 
-        print(f"Login attempt with normalized Username: '{input_username}' and Password: '{input_password}'")
+    print(f"Login attempt with normalized Username: '{input_username}' and Password: '{input_password}'")
+    
+    try:
+        # Execute SQL query with normalized username
+        user = self.db.query(
+            "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?",
+            (input_username, input_password)
+        )
+        
+        # Check if a user was found
+        if user:
+            role = user[0][0]
+            print(f"User found: Role = {role}")
+            
+            # Open the corresponding dashboard based on role
+            if role == 'admin':
+                from admin_dashboard import AdminDashboard
+                AdminDashboard(self.root, self.db)
+            elif role == 'employee':
+                from employee_dashboard import EmployeeDashboard
+                EmployeeDashboard(self.root, self.db, input_username)
+        else:
+            print("Invalid credentials")
+            messagebox.showerror("Login Failed", "Invalid credentials!")
+    except sqlite3.Error as e:
+        print(f"Exception during login query: {e}")
+        messagebox.showerror("Error", "An error occurred during login.")
 
-        try:
-            # Execute SQL query with normalized username
-            user = self.db.query(
-                "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?",
-                (input_username, input_password)
-            )
-
-            # Check if a user was found and print detailed query result
-            if user:
-                role = user[0][0]
-                print(f"User found: Role = {role}")
-                # Determine role and open corresponding dashboard
-                if role == 'admin':
-                    from admin_dashboard import AdminDashboard
-                    AdminDashboard(self.root, self.db)
-                elif role == 'employee':
-                    from employee_dashboard import EmployeeDashboard
-                    EmployeeDashboard(self.root, self.db, input_username)
-            else:
-                print("No matching user found in the database. Please check the username and password.")
-                messagebox.showerror("Login Failed", "Invalid credentials!")
-        except sqlite3.Error as e:
-            print(f"Exception during login query: {e}")
-            messagebox.showerror("Error", "An error occurred during login.")
 
     def clear_window(self):
         """Clear the current window of widgets."""
