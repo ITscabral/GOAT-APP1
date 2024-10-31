@@ -48,39 +48,13 @@ def initialize_db():
     conn.commit()
     conn.close()
 
-# Function to get a database connection
+# Call the initialization function
+initialize_db()
+
 def get_db_connection():
     conn = sqlite3.connect('timesheet.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
-
-# Function to populate users into the database
-def populate_users():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    users = [
-        ('lucas_cabral', '123', 'employee', '123456789'),
-        ('jackson_carneiro', '123', 'employee', '123456789'),
-        ('bruno_vianello', '123', 'employee', '123456789'),
-        ('thallys_carvalho', '123', 'employee', '123456789'),
-        ('michel_silva', '123', 'admin', '123456789'),
-        ('giulliano_cabral', '123', 'employee', '123456789'),
-        ('pedro_cadenas', '123', 'employee', '123456789'),
-        ('caio_henrique', '123', 'employee', '123456789')
-    ]
-
-    for user in users:
-        cursor.execute('''
-            INSERT OR IGNORE INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)
-        ''', user)
-
-    conn.commit()
-    conn.close()
-
-# Call the initialization function
-initialize_db()
-populate_users()
 
 @app.route('/')
 def home():
@@ -88,8 +62,9 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username').lower()  # Convert to lowercase for case-insensitive match
+    username = request.form.get('username').strip().lower()  # Strip spaces and convert to lowercase for case-insensitive match
     password = request.form.get('password')
+    
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
@@ -112,10 +87,10 @@ def login():
 def admin_dashboard():
     conn = get_db_connection()
     teams = {
-        "Team 1": ["jackson_carneiro", "lucas_cabral"],
-        "Team 2": ["bruno_vianello", "thallys_carvalho"],
-        "Team 3": ["michel_silva", "giulliano_cabral"],
-        "Team 4": ["pedro_cadenas", "caio_henrique"],
+        "Team 1": ["Jackson Carneiro", "Lucas Cabral"],
+        "Team 2": ["Bruno Vianello", "Thallys Carvalho"],
+        "Team 3": ["Michel Silva", "Giulliano Cabral"],
+        "Team 4": ["Pedro Cadenas", "Caio Henrique"],
     }
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
@@ -133,7 +108,7 @@ def admin_dashboard():
     employee_list = []
     for team_name, team_members in teams.items():
         for member in team_members:
-            employee_data = next((emp for emp in employees if emp['username'] == member), None)
+            employee_data = next((emp for emp in employees if emp['username'].lower() == member.lower()), None)
             if employee_data:
                 employee_list.append({'username': member, 'team': team_name, 'role': employee_data['role']})
             else:
@@ -146,7 +121,9 @@ def admin_dashboard():
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
+            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'],
+                                                                                                    "%H:%M") - timedelta(
+                minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
 
@@ -189,7 +166,7 @@ def employee_dashboard(username):
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
-    username = request.form.get('username').lower()  # Convert to lowercase for case-insensitive match
+    username = request.form.get('username').strip().lower()  # Convert to lowercase for case-insensitive match
     date = request.form.get('date')
     start_time = request.form.get('start_time')
     end_time = request.form.get('end_time')
@@ -209,54 +186,72 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/get_invoices', methods=['GET'])
-def get_invoices():
+@app.route('/generate_invoice', methods=['POST'])
+def generate_invoice_route():
+    username = request.form.get('username')
+
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+
+    # Fetch time entries for this employee
     conn = get_db_connection()
-    invoices = conn.execute('SELECT * FROM invoices').fetchall()
+    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE LOWER(username) = ?', (username.lower(),)).fetchall()
     conn.close()
-    invoice_list = [
-        {
-            'invoice_number': invoice['invoice_number'],
-            'username': invoice['username'],
-            'date': invoice['date'],
-            'total_hours': invoice['total_hours'],
-            'total_payment': invoice['total_payment'],
-            'filename': invoice['filename']
-        }
-        for invoice in invoices
+
+    if not entries:
+        return jsonify({'error': 'No time entries found for this user'}), 400
+
+    timesheet_data = [
+        (entry['date'], entry['start_time'], entry['end_time'],
+        round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+        for entry in entries
     ]
-    return jsonify(invoice_list)
+    total_hours = sum(entry[3] for entry in timesheet_data)
 
-@app.route('/add_employee', methods=['POST'])
-def add_employee():
-    name = request.form.get('name')
-    role = request.form.get('role')
-    rate = request.form.get('rate')
-    abn = request.form.get('abn')
-    phone_number = request.form.get('phone_number')
+    # Generate Invoice Number
+    conn = get_db_connection()
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
+    conn.close()
 
-    if not all([name, role, rate, abn, phone_number]):
-        return jsonify({'error': 'All fields are required!'}), 400
+    # Generate Invoice PDF
+    target_directory = os.path.join(os.getcwd(), "invoices")
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
+    filename = f"Invoice_{invoice_number}_{username}.pdf"
+    filepath = os.path.join(target_directory, filename)
 
+    # Use your existing `generate_invoice` function to create the PDF
+    result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
+
+    # Validate if the file was created
+    if result_filepath is None or not os.path.exists(result_filepath):
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
+    # Save Invoice Metadata to Database
     try:
         conn = get_db_connection()
         conn.execute(
-            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
-            (name, '123', role, phone_number)
+            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
         )
         conn.commit()
         conn.close()
-        return jsonify({'message': 'Employee added successfully!'}), 201
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'Employee with this username already exists!'}), 400
+    except sqlite3.Error as e:
+        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
 
-# New Route to Download the Database File
-@app.route('/download_timesheet_db')
-def download_timesheet_db():
-    try:
-        return send_file('timesheet.db', as_attachment=True)
-    except Exception as e:
-        return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
+    # Return a success response with the invoice number
+    return jsonify({'success': True, 'invoice_number': invoice_number})
+
+@app.route('/open_invoice/<filename>')
+def open_invoice(filename):
+    filepath = os.path.join(os.getcwd(), "invoices", filename)
+    if os.path.exists(filepath):
+        try:
+            return send_file(filepath, as_attachment=False)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+    else:
+        return jsonify({'error': 'Invoice file not found'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
