@@ -13,9 +13,6 @@
             max-width: 1200px;
             margin: auto;
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
         table {
             width: 100%;
             margin-top: 20px;
@@ -69,20 +66,14 @@
             </tr>
             </thead>
             <tbody id="timeEntriesTable">
-            {% for employee in employees %}
-                {% set has_entries = false %}
-                {% for entry in entries %}
-                    {% if entry.username == employee.username %}
-                    {% set has_entries = true %}
-                    <tr class="entryRow" data-username="{{ entry.username }}" data-team="{{ employee.team }}">
-                        <td>{{ entry.username }}</td>
-                        <td>{{ entry.date }}</td>
-                        <td>{{ entry.start_time }}</td>
-                        <td>{{ entry.end_time }}</td>
-                        <td>{{ entry.total_hours }}</td>
-                    </tr>
-                    {% endif %}
-                {% endfor %}
+            {% for entry in entries %}
+            <tr class="entryRow" data-username="{{ entry.username }}" data-team="{{ entry.team }}">
+                <td>{{ entry.username }}</td>
+                <td>{{ entry.date }}</td>
+                <td>{{ entry.start_time }}</td>
+                <td>{{ entry.end_time }}</td>
+                <td>{{ entry.total_hours }}</td>
+            </tr>
             {% endfor %}
             </tbody>
         </table>
@@ -95,6 +86,7 @@
             <thead>
             <tr>
                 <th>Invoice #</th>
+                <th>Username</th>
                 <th>Date</th>
                 <th>Total Hours</th>
                 <th>Total Payment</th>
@@ -103,60 +95,24 @@
             </thead>
             <tbody id="invoicesTable">
             {% for invoice in invoices %}
-                {% for employee in employees %}
-                    {% if invoice.username == employee.username %}
-                    <tr class="invoiceRow" data-username="{{ invoice.username }}" data-team="{{ employee.team }}">
-                        <td>{{ invoice.invoice_number }}</td>
-                        <td>{{ invoice.date }}</td>
-                        <td>{{ invoice.total_hours }}</td>
-                        <td>{{ invoice.total_payment }}</td>
-                        <td><a href="{{ url_for('open_invoice', filename=invoice.filename) }}" class="btn btn-primary">Open</a></td>
-                    </tr>
-                    {% endif %}
-                {% endfor %}
+            <tr class="invoiceRow" data-username="{{ invoice.username }}">
+                <td>{{ invoice.invoice_number }}</td>
+                <td>{{ invoice.username }}</td>
+                <td>{{ invoice.date }}</td>
+                <td>{{ invoice.total_hours }}</td>
+                <td>{{ invoice.total_payment }}</td>
+                <td><a href="{{ url_for('open_invoice', filename=invoice.filename) }}" class="btn btn-primary">Open</a></td>
+            </tr>
             {% endfor %}
             </tbody>
         </table>
-    </div>
-
-    <!-- Add New Employee Form -->
-    <div id="addEmployeeSection" class="mt-5">
-        <h2>Add New Employee</h2>
-        <form action="/add_employee" method="POST">
-            <div class="form-group">
-                <label for="name">Name:</label>
-                <input type="text" class="form-control" id="name" name="name" required>
-            </div>
-            <div class="form-group">
-                <label for="role">Main Role:</label>
-                <select class="form-control" id="role" name="role">
-                    <option value="Driver">Driver</option>
-                    <option value="Offsider">Offsider</option>
-                    <option value="Dock Receiver">Dock Receiver</option>
-                    <option value="One-Day Labour">One-Day Labour</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label for="rate">Rate per Hour:</label>
-                <input type="number" class="form-control" id="rate" name="rate" required>
-            </div>
-            <div class="form-group">
-                <label for="abn">ABN:</label>
-                <input type="text" class="form-control" id="abn" name="abn" required>
-            </div>
-            <div class="form-group">
-                <label for="phone_number">Phone Number:</label>
-                <input type="text" class="form-control" id="phone_number" name="phone_number" required>
-            </div>
-            <button type="submit" class="btn btn-success">Add Employee</button>
-        </form>
     </div>
 </div>
 
 <script>
     function filterByTeam() {
         const selectedTeam = document.getElementById("teamSelect").value;
-        const rows = document.querySelectorAll(".entryRow, .invoiceRow");
+        const rows = document.querySelectorAll(".entryRow");
         rows.forEach(row => {
             if (selectedTeam === "" || row.getAttribute("data-team") === selectedTeam) {
                 row.style.display = "";
@@ -168,7 +124,7 @@
 
     function filterByEmployee() {
         const selectedEmployee = document.getElementById("employeeSelect").value;
-        const rows = document.querySelectorAll(".entryRow, .invoiceRow");
+        const rows = document.querySelectorAll(".entryRow");
         rows.forEach(row => {
             if (selectedEmployee === "" || row.getAttribute("data-username") === selectedEmployee) {
                 row.style.display = "";
