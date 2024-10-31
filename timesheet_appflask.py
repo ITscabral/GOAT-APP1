@@ -45,6 +45,23 @@ def initialize_db():
         )
     ''')
 
+    # Insert default users if they don't already exist
+    default_users = [
+        ('michel_silva', '123', 'admin', '0000000000'),
+        ('lucas_cabral', '123', 'employee', '0000000000'),
+        ('jackson_carneiro', '123', 'employee', '0000000000'),
+        ('bruno_vianello', '123', 'employee', '0000000000'),
+        ('thallys_carvalho', '123', 'employee', '0000000000'),
+        ('giulliano_cabral', '123', 'employee', '0000000000'),
+        ('pedro_cadenas', '123', 'employee', '0000000000'),
+        ('caio_henrique', '123', 'employee', '0000000000')
+    ]
+
+    for user in default_users:
+        cursor.execute('''
+            INSERT OR IGNORE INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)
+        ''', user)
+
     conn.commit()
     conn.close()
 
@@ -185,13 +202,46 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-# New Route to Download the Database File
-@app.route('/download_timesheet_db')
-def download_timesheet_db():
+@app.route('/get_invoices', methods=['GET'])
+def get_invoices():
+    conn = get_db_connection()
+    invoices = conn.execute('SELECT * FROM invoices').fetchall()
+    conn.close()
+    invoice_list = [
+        {
+            'invoice_number': invoice['invoice_number'],
+            'username': invoice['username'],
+            'date': invoice['date'],
+            'total_hours': invoice['total_hours'],
+            'total_payment': invoice['total_payment'],
+            'filename': invoice['filename']
+        }
+        for invoice in invoices
+    ]
+    return jsonify(invoice_list)
+
+@app.route('/add_employee', methods=['POST'])
+def add_employee():
+    name = request.form.get('name')
+    role = request.form.get('role')
+    rate = request.form.get('rate')
+    abn = request.form.get('abn')
+    phone_number = request.form.get('phone_number')
+
+    if not all([name, role, rate, abn, phone_number]):
+        return jsonify({'error': 'All fields are required!'}), 400
+
     try:
-        return send_file('timesheet.db', as_attachment=True)
-    except Exception as e:
-        return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
+            (name, '123', role, phone_number)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Employee added successfully!'}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Employee with this username already exists!'}), 400
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
