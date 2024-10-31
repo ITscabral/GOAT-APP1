@@ -4,9 +4,7 @@ from tkinter import messagebox
 import uuid
 import sqlite3
 from dotenv import load_dotenv
-from admin_dashboard import AdminDashboard
-from employee_dashboard import EmployeeDashboard
-from db_handler import Database  # Updated import to match the new file name
+from db_handler import Database  # Updated import to avoid circular import
 from twilio.rest import Client
 
 class TimesheetApp:
@@ -43,9 +41,12 @@ class TimesheetApp:
             user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
             if user:
                 role = user[0][0]
+                # Conditional imports to avoid circular dependency
                 if role == 'admin':
+                    from admin_dashboard import AdminDashboard
                     AdminDashboard(self.root, self.db)
                 elif role == 'employee':
+                    from employee_dashboard import EmployeeDashboard
                     EmployeeDashboard(self.root, self.db, username)
             else:
                 print("Invalid credentials")
@@ -73,6 +74,7 @@ class TimesheetApp:
 
         if user and user[0][0]:
             phone_number = str(user[0][0]).strip()
+            # Format phone number for Australian numbers
             if phone_number.startswith('0'):
                 phone_number = f"+61{phone_number[1:]}"
             elif not phone_number.startswith('+'):
@@ -81,6 +83,7 @@ class TimesheetApp:
             # Generate and store reset token
             token = uuid.uuid4().hex[:8]
             self.db.execute("UPDATE users SET reset_token = ? WHERE LOWER(username) = ?", (token, username.lower()))
+            # Send SMS with the token
             self.send_sms(phone_number, f"Your password reset token is: {token}")
             messagebox.showinfo("Success", "Reset token sent via SMS.")
             self.password_change_window()
