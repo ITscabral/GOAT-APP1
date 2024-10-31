@@ -119,15 +119,12 @@ def admin_dashboard():
         "Team 4": ["pedro_cadenas", "caio_henrique"],
     }
 
+    # Fetch all employees
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
+    # Fetch all time entries
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
-
-    # Join invoices with users to get employee names
-    invoices = conn.execute('''
-        SELECT invoices.*, users.username as employee_name
-        FROM invoices
-        JOIN users ON invoices.username = users.username
-    ''').fetchall()
+    # Fetch all invoices
+    invoices = conn.execute('SELECT * FROM invoices').fetchall()
 
     conn.close()
 
@@ -151,12 +148,11 @@ def admin_dashboard():
         }
         entry_list.append(entry_data)
 
-    # Include the employee's name in the invoices list
     invoice_list = []
     for invoice in invoices:
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': invoice['employee_name'],
+            'username': invoice['username'],
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
@@ -258,33 +254,3 @@ def generate_invoice_route():
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
             (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
-        )
-        conn.commit()
-        conn.close()
-        return jsonify({'success': True, 'invoice_number': invoice_number})
-    except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
-
-# Route to send an invoice via email or other means
-@app.route('/send_invoice', methods=['POST'])
-def send_invoice_route():
-    username = request.form.get('username').strip()
-    invoice_number = request.form.get('invoice_number')
-
-    if not username or not invoice_number:
-        return jsonify({'error': 'Username and invoice number are required'}), 400
-
-    conn = get_db_connection()
-    invoice = conn.execute('SELECT * FROM invoices WHERE invoice_number = ?', (invoice_number,)).fetchone()
-    conn.close()
-
-    if not invoice:
-        return jsonify({'error': 'Invoice not found'}), 404
-
-    # Logic to send invoice (e.g., via email)
-    # For the sake of example, we'll assume the invoice is sent successfully
-
-    return jsonify({'success': True, 'message': 'Invoice sent successfully'})
-
-if __name__ == '__main__':
-    app.run(debug=True)
