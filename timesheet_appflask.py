@@ -3,6 +3,8 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
+from db_handler import Database
+
 
 app = Flask(__name__)
 
