@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 import sqlite3
 import os
 from datetime import datetime, timedelta
-from invoice_generator import generate_invoice, open_invoice
+from invoice_generator import generate_invoice
 
 app = Flask(__name__)
 
@@ -44,23 +44,6 @@ def initialize_db():
             FOREIGN KEY (username) REFERENCES users (username)
         )
     ''')
-
-    # Insert default users if they don't already exist
-    default_users = [
-        ('michel_silva', '123', 'admin', '0000000000'),
-        ('lucas_cabral', '123', 'employee', '0000000000'),
-        ('jackson_carneiro', '123', 'employee', '0000000000'),
-        ('bruno_vianello', '123', 'employee', '0000000000'),
-        ('thallys_carvalho', '123', 'employee', '0000000000'),
-        ('giulliano_cabral', '123', 'employee', '0000000000'),
-        ('pedro_cadenas', '123', 'employee', '0000000000'),
-        ('caio_henrique', '123', 'employee', '0000000000')
-    ]
-
-    for user in default_users:
-        cursor.execute('''
-            INSERT OR IGNORE INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)
-        ''', user)
 
     conn.commit()
     conn.close()
@@ -202,46 +185,70 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/get_invoices', methods=['GET'])
-def get_invoices():
+# Route to generate an invoice and return it as a PDF file
+@app.route('/generate_invoice', methods=['POST'])
+def generate_invoice_route():
+    username = request.form.get('username')
+
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+
+    # Fetch time entries for this employee
     conn = get_db_connection()
-    invoices = conn.execute('SELECT * FROM invoices').fetchall()
+    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
     conn.close()
-    invoice_list = [
-        {
-            'invoice_number': invoice['invoice_number'],
-            'username': invoice['username'],
-            'date': invoice['date'],
-            'total_hours': invoice['total_hours'],
-            'total_payment': invoice['total_payment'],
-            'filename': invoice['filename']
-        }
-        for invoice in invoices
+
+    if not entries:
+        return jsonify({'error': 'No time entries found for this user'}), 400
+
+    timesheet_data = [
+        (entry['date'], entry['start_time'], entry['end_time'],
+        round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+        for entry in entries
     ]
-    return jsonify(invoice_list)
+    total_hours = sum(entry[3] for entry in timesheet_data)
 
-@app.route('/add_employee', methods=['POST'])
-def add_employee():
-    name = request.form.get('name')
-    role = request.form.get('role')
-    rate = request.form.get('rate')
-    abn = request.form.get('abn')
-    phone_number = request.form.get('phone_number')
+    # Generate Invoice Number
+    conn = get_db_connection()
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
+    conn.close()
 
-    if not all([name, role, rate, abn, phone_number]):
-        return jsonify({'error': 'All fields are required!'}), 400
+    # Generate Invoice PDF
+    target_directory = os.path.join(os.getcwd(), "invoices")
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
+    filename = f"Invoice_{invoice_number}_{username}.pdf"
+    filepath = os.path.join(target_directory, filename)
 
+    # Use your existing `generate_invoice` function to create the PDF
+    result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
+
+    # Validate if the file was created
+    if result_filepath is None or not os.path.exists(result_filepath):
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
+    # Save Invoice Metadata to Database
     try:
         conn = get_db_connection()
         conn.execute(
-            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
-            (name, '123', role, phone_number)
+            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
         )
         conn.commit()
         conn.close()
-        return jsonify({'message': 'Employee added successfully!'}), 201
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'Employee with this username already exists!'}), 400
+    except sqlite3.Error as e:
+        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
+
+    # Return the invoice as a PDF file
+    return send_file(filepath, as_attachment=False)
+
+# Route to download the timesheet.db file
+@app.route('/download_timesheet_db')
+def download_timesheet_db():
+    try:
+        return send_file('timesheet.db', as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
