@@ -5,15 +5,13 @@ from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
 
-
 app = Flask(__name__)
 
-# Function to initialize the database and create tables if they don't exist
+# Initialize the database and create tables if they don't exist
 def initialize_db():
     conn = sqlite3.connect('timesheet.db', check_same_thread=False)
     cursor = conn.cursor()
 
-    # Create users table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
@@ -22,8 +20,6 @@ def initialize_db():
             phone_number TEXT
         )
     ''')
-
-    # Create time_entries table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS time_entries (
             username TEXT,
@@ -33,8 +29,6 @@ def initialize_db():
             FOREIGN KEY (username) REFERENCES users (username)
         )
     ''')
-
-    # Create invoices table
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS invoices (
             invoice_number INTEGER PRIMARY KEY,
@@ -53,6 +47,7 @@ def initialize_db():
 # Call the initialization function
 initialize_db()
 
+# Get database connection
 def get_db_connection():
     conn = sqlite3.connect('timesheet.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -64,20 +59,26 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username')  # Gets the username from form input
-    password = request.form.get('password')  # Gets the password from form input
+    # Process username to be case-insensitive and remove spaces
+    username = request.form.get('username').strip().lower().replace(" ", "")
+    password = request.form.get('password')
+    
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
     conn = get_db_connection()
     try:
-        user = conn.execute('SELECT * FROM users WHERE LOWER(username) = ?', (username,)).fetchone()
+        # Adjust SQL to remove spaces in username, making it case- and space-insensitive
+        user = conn.execute(
+            "SELECT * FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?", 
+            (username, password)
+        ).fetchone()
     except sqlite3.OperationalError as e:
         return jsonify({'error': f"Database error: {e}. Please check your database structure."}), 500
+    finally:
+        conn.close()
 
-    conn.close()
-
-    if user and user['password'] == password:
+    if user:
         if user['role'] == 'admin':
             return redirect(url_for('admin_dashboard'))
         elif user['role'] == 'employee':
@@ -96,14 +97,11 @@ def admin_dashboard():
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
-
-    # Join invoices with users to get employee names
     invoices = conn.execute('''
         SELECT invoices.*, users.username as employee_name
         FROM invoices
         JOIN users ON invoices.username = users.username
     ''').fetchall()
-
     conn.close()
 
     employee_list = []
@@ -128,7 +126,6 @@ def admin_dashboard():
         }
         entry_list.append(entry_data)
 
-    # Include the employee's name in the invoices list
     invoice_list = []
     for invoice in invoices:
         invoice_data = {
@@ -146,14 +143,18 @@ def admin_dashboard():
         teams=teams.keys(),
         employees=employee_list,
         entries=entry_list,
-        invoices=invoice_list  # Pass updated invoice list with employee names
+        invoices=invoice_list
     )
 
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
-    entries = conn.execute('SELECT * FROM time_entries WHERE LOWER(username) = ?', (username.lower(),)).fetchall()
+    entries = conn.execute(
+        'SELECT * FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?', 
+        (username.lower().replace(" ", ""),)
+    ).fetchall()
     conn.close()
+    
     entry_list = []
     for entry in entries:
         entry_data = {
@@ -164,6 +165,8 @@ def employee_dashboard(username):
         }
         entry_list.append(entry_data)
     return render_template('employee_dashboard.html', username=username, entries=entry_list)
+
+# Other routes remain unchanged
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
