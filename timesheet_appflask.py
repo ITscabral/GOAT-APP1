@@ -70,10 +70,16 @@ def login():
     conn = get_db_connection()
     try:
         user = conn.execute('SELECT * FROM users WHERE LOWER(REPLACE(username, " ", "_")) = ?', (username,)).fetchone()
+        print(f"Debug: Queried user - {user}")  # Debugging information
     except sqlite3.OperationalError as e:
         return jsonify({'error': f"Database error: {e}. Please check your database structure."}), 500
 
     conn.close()
+
+    if user:
+        print(f"Debug: User found - Username: {user['username']}, Password: {user['password']}, Role: {user['role']}")  # Debugging information
+    else:
+        print("Debug: No user found with the given username.")
 
     if user and user['password'] == password:
         if user['role'] == 'admin':
