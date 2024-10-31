@@ -8,13 +8,10 @@ class Database:
         if not os.path.exists(db_path):
             print(f"Database file '{db_path}' not found.")
             raise FileNotFoundError("The specified database file does not exist.")
-
-        try:
-            self.connection = sqlite3.connect(db_path, check_same_thread=False)
-            self.cursor = self.connection.cursor()
-            print("Connected to SQLite database successfully.")
-        except sqlite3.Error as e:
-            print(f"Database connection error: {e}")
+        # Establish connection
+        self.connection = sqlite3.connect(db_path, check_same_thread=False)
+        self.cursor = self.connection.cursor()
+        print("Connected to SQLite database successfully.")
 
     def query(self, sql, params=()):
         try:
