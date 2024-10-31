@@ -62,9 +62,8 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username').strip().lower()  # Strip spaces and convert to lowercase for case-insensitive match
+    username = request.form.get('username').lower()  # Convert to lowercase for case-insensitive match
     password = request.form.get('password')
-    
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
@@ -87,10 +86,10 @@ def login():
 def admin_dashboard():
     conn = get_db_connection()
     teams = {
-        "Team 1": ["Jackson Carneiro", "Lucas Cabral"],
-        "Team 2": ["Bruno Vianello", "Thallys Carvalho"],
-        "Team 3": ["Michel Silva", "Giulliano Cabral"],
-        "Team 4": ["Pedro Cadenas", "Caio Henrique"],
+        "Team 1": ["jackson_carneiro", "lucas_cabral"],
+        "Team 2": ["bruno_vianello", "thallys_carvalho"],
+        "Team 3": ["michel_silva", "giulliano_cabral"],
+        "Team 4": ["pedro_cadenas", "caio_henrique"],
     }
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
@@ -108,7 +107,7 @@ def admin_dashboard():
     employee_list = []
     for team_name, team_members in teams.items():
         for member in team_members:
-            employee_data = next((emp for emp in employees if emp['username'].lower() == member.lower()), None)
+            employee_data = next((emp for emp in employees if emp['username'] == member), None)
             if employee_data:
                 employee_list.append({'username': member, 'team': team_name, 'role': employee_data['role']})
             else:
@@ -121,7 +120,9 @@ def admin_dashboard():
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
+            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'],
+                                                                                                    "%H:%M") - timedelta(
+                minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
 
@@ -164,7 +165,7 @@ def employee_dashboard(username):
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
-    username = request.form.get('username').strip().lower()  # Convert to lowercase for case-insensitive match
+    username = request.form.get('username').lower()  # Convert to lowercase for case-insensitive match
     date = request.form.get('date')
     start_time = request.form.get('start_time')
     end_time = request.form.get('end_time')
@@ -184,54 +185,13 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/download_db', methods=['GET'])
-def download_db():
-    """Route to download the database file."""
-    db_path = os.path.join(os.getcwd(), 'timesheet.db')
-    if os.path.exists(db_path):
-        try:
-            return send_file(db_path, as_attachment=True)
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
-    else:
-        return jsonify({'error': 'Database file not found'}), 404
+# New Route to Download the Database File
+@app.route('/download_timesheet_db')
+def download_timesheet_db():
+    try:
+        return send_file('timesheet.db', as_attachment=True)
+    except Exception as e:
+        return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
 
-@app.route('/generate_invoice', methods=['POST'])
-def generate_invoice_route():
-    username = request.form.get('username')
-
-    if not username:
-        return jsonify({'error': 'Username is required'}), 400
-
-    # Fetch time entries for this employee
-    conn = get_db_connection()
-    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE LOWER(username) = ?', (username.lower(),)).fetchall()
-    conn.close()
-
-    if not entries:
-        return jsonify({'error': 'No time entries found for this user'}), 400
-
-    timesheet_data = [
-        (entry['date'], entry['start_time'], entry['end_time'],
-        round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
-        for entry in entries
-    ]
-    total_hours = sum(entry[3] for entry in timesheet_data)
-
-    # Generate Invoice Number
-    conn = get_db_connection()
-    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
-    conn.close()
-
-    # Generate Invoice PDF
-    target_directory = os.path.join(os.getcwd(), "invoices")
-    if not os.path.exists(target_directory):
-        os.makedirs(target_directory)
-    filename = f"Invoice_{invoice_number}_{username}.pdf"
-    filepath = os.path.join(target_directory, filename)
-
-    # Use your existing `generate_invoice` function to create the PDF
-    result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
-
-    # Validate if the file was created
-    if result_filepath is None or
+if __name__ == '__main__':
+    app.run(debug=True, host='0.0.0.0', port=5000)
