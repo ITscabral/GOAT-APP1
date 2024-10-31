@@ -16,7 +16,8 @@ class Database:
                 password TEXT,
                 role TEXT,
                 phone_number TEXT,
-                reset_token TEXT
+                reset_token TEXT,
+                first_login INTEGER DEFAULT 1
             )''')
 
         self.cursor.execute('''
@@ -67,7 +68,18 @@ class Database:
     def add_default_users(self):
         """Add default users for testing."""
         self.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ('admin', '123', 'admin'))
-        self.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ('employee', '123', 'employee'))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login) VALUES (?, ?, ?, ?)", ('employee1', '123', 'employee', 1))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login) VALUES (?, ?, ?, ?)", ('employee2', '123', 'employee', 1))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login) VALUES (?, ?, ?, ?)", ('employee3', '123', 'employee', 1))
+
+    def update_password(self, username, new_password):
+        """Update password for a user and set first_login to 0."""
+        self.execute("UPDATE users SET password = ?, first_login = 0 WHERE username = ?", (new_password, username))
+
+    def is_first_login(self, username):
+        """Check if the user is logging in for the first time."""
+        result = self.query("SELECT first_login FROM users WHERE username = ?", (username,))
+        return result[0][0] == 1 if result else False
 
     def close(self):
         self.conn.close()
