@@ -48,10 +48,13 @@ def initialize_db():
     conn.commit()
     conn.close()
 
-# Call the initialization function
-initialize_db()
+# Function to get a database connection
+def get_db_connection():
+    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-# Call this function after initialize_db() in your script
+# Function to populate users into the database
 def populate_users():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -75,13 +78,9 @@ def populate_users():
     conn.commit()
     conn.close()
 
-# Populate users after initializing the database
+# Call the initialization function
+initialize_db()
 populate_users()
-
-def get_db_connection():
-    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 @app.route('/')
 def home():
