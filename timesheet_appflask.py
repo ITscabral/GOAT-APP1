@@ -62,7 +62,7 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username').lower().replace(" ", "_")  # Convert to lowercase and replace spaces with underscores for case-insensitive match
+    username = request.form.get('username').strip().lower().replace(" ", "_")  # Convert to lowercase, remove spaces, replace spaces with underscores
     password = request.form.get('password')
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
@@ -163,7 +163,7 @@ def employee_dashboard(username):
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
-    username = request.form.get('username').lower().replace(" ", "_")  # Convert to lowercase for case-insensitive match
+    username = request.form.get('username').strip().lower().replace(" ", "_")  # Convert to lowercase for case-insensitive match
     date = request.form.get('date')
     start_time = request.form.get('start_time')
     end_time = request.form.get('end_time')
@@ -186,7 +186,7 @@ def add_time_entry():
 # Route to generate an invoice and return it as a PDF file
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
-    username = request.form.get('username').lower().replace(" ", "_")
+    username = request.form.get('username').strip().lower().replace(" ", "_")
 
     if not username:
         return jsonify({'error': 'Username is required'}), 400
@@ -241,7 +241,7 @@ def generate_invoice_route():
 # Route to send an invoice via email or other means
 @app.route('/send_invoice', methods=['POST'])
 def send_invoice_route():
-    username = request.form.get('username').lower().replace(" ", "_")
+    username = request.form.get('username').strip().lower().replace(" ", "_")
     invoice_number = request.form.get('invoice_number')
 
     if not username or not invoice_number:
