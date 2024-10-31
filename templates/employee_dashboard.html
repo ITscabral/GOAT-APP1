@@ -81,66 +81,12 @@
     <!-- Invoice Actions -->
     <div id="invoiceActions" class="mt-5">
         <h3>Invoice Actions</h3>
-        <!-- Generate Invoice Form -->
         <form id="generateInvoiceForm" action="/generate_invoice" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
-        </form>
-        <!-- Send Invoice Form -->
-        <form id="sendInvoiceForm" action="/send_invoice" method="POST">
-            <input type="hidden" name="username" value="{{ username }}">
-            <input type="hidden" name="invoice_number" id="invoiceNumber">
-            <button type="button" id="sendInvoiceButton" class="btn btn-secondary" disabled>Send Invoice</button>
+            <button type="submit" class="btn btn-primary">Generate & View Invoice</button>
         </form>
     </div>
 </div>
-
-<script>
-    document.getElementById("generateInvoiceForm").onsubmit = function(event) {
-        event.preventDefault(); // Prevent default form submission
-
-        fetch(this.action, {
-            method: 'POST',
-            body: new FormData(this)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Enable "Send Invoice" button
-                const sendInvoiceButton = document.getElementById("sendInvoiceButton");
-                sendInvoiceButton.disabled = false;
-                sendInvoiceButton.classList.remove('btn-secondary');
-                sendInvoiceButton.classList.add('btn-success');
-
-                // Set the invoice number to a hidden field
-                document.getElementById("invoiceNumber").value = data.invoice_number;
-
-                // Alert the user
-                alert("Invoice generated successfully!");
-            } else {
-                alert("Error generating invoice: " + data.error);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    };
-
-    // Send Invoice Button Handler
-    document.getElementById("sendInvoiceButton").onclick = function() {
-        fetch(document.getElementById("sendInvoiceForm").action, {
-            method: 'POST',
-            body: new FormData(document.getElementById("sendInvoiceForm"))
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                alert(data.message);
-            } else {
-                alert("Error sending invoice: " + data.error);
-            }
-        })
-        .catch(error => console.error('Error:', error));
-    };
-</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
