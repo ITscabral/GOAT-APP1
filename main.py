@@ -21,13 +21,16 @@ def index():
 def login():
     username = request.form['username']
     password = request.form['password']
-    user = db.get_user(username, password)
+    user = db.query('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
     if user:
         session['username'] = username
-        if user['role'] == 'admin':
+        role = user[0][3]  # Assuming role is in the 4th column of the users table
+        if role == 'admin':
             return redirect(url_for('admin_dashboard_view'))
-        else:
+        elif role == 'employee':
             return redirect(url_for('employee_dashboard_view'))
+        else:
+            return "Access denied: role not recognized."
     else:
         return "Invalid credentials, please try again."
 
