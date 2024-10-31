@@ -63,30 +63,34 @@ def home():
 @app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username').strip()  # Remove leading and trailing spaces only
-    password = request.form.get('password')
+    password = request.form.get('password').strip()  # Remove leading and trailing spaces only
+
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
     conn = get_db_connection()
     try:
+        # Query for the exact username without altering it to ensure correct matching
         user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        print(f"Debug: Queried user - {user}")  # Debugging information
+        if user:
+            print(f"Debug: User found - Username: {user['username']}, Password: {user['password']}, Role: {user['role']}")  # Debugging information
+        else:
+            print(f"Debug: No user found for username: {username}")
+            return jsonify({'message': 'Invalid credentials'}), 401
     except sqlite3.OperationalError as e:
         return jsonify({'error': f"Database error: {e}. Please check your database structure."}), 500
+    finally:
+        conn.close()
 
-    conn.close()
-
-    if user:
-        print(f"Debug: User found - Username: {user['username']}, Password: {user['password']}, Role: {user['role']}")  # Debugging information
-    else:
-        print("Debug: No user found with the given username.")
-
-    if user and user['password'] == password:
+    # Validate password
+    if user['password'] == password:
         if user['role'] == 'admin':
             return redirect(url_for('admin_dashboard'))
         elif user['role'] == 'employee':
             return redirect(url_for('employee_dashboard', username=user['username']))
-    return jsonify({'message': 'Invalid credentials'}), 401
+    else:
+        print(f"Debug: Password mismatch for username: {username}")
+        return jsonify({'message': 'Invalid credentials'}), 401
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
