@@ -51,6 +51,33 @@ def initialize_db():
 # Call the initialization function
 initialize_db()
 
+# Call this function after initialize_db() in your script
+def populate_users():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    users = [
+        ('lucas_cabral', '123', 'employee', '123456789'),
+        ('jackson_carneiro', '123', 'employee', '123456789'),
+        ('bruno_vianello', '123', 'employee', '123456789'),
+        ('thallys_carvalho', '123', 'employee', '123456789'),
+        ('michel_silva', '123', 'admin', '123456789'),
+        ('giulliano_cabral', '123', 'employee', '123456789'),
+        ('pedro_cadenas', '123', 'employee', '123456789'),
+        ('caio_henrique', '123', 'employee', '123456789')
+    ]
+
+    for user in users:
+        cursor.execute('''
+            INSERT OR IGNORE INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)
+        ''', user)
+
+    conn.commit()
+    conn.close()
+
+# Populate users after initializing the database
+populate_users()
+
 def get_db_connection():
     conn = sqlite3.connect('timesheet.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
