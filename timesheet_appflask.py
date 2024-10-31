@@ -64,8 +64,8 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username').lower()  # Convert to lowercase for case-insensitive match
-    password = request.form.get('password')
+    username = request.form.get('username')  # Gets the username from form input
+    password = request.form.get('password')  # Gets the password from form input
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
