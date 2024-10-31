@@ -1,11 +1,17 @@
-gunicorn==23.0.0
-packaging==24.1
-pygame==2.5.2
-tbb==2021.13.0
-trampoline==0.1.2
-waitress==3.0.1
 
-twilio~=9.3.4
-tkcalendar~=1.6.1
-reportlab~=4.2.5
+gunicorn==23.0.0  # Use this for Unix-based servers (e.g., most cloud providers)
+waitress==3.0.1  # Use this for Windows-based servers (uncomment if using Waitress instead of Gunicorn)
+
+# Flask and Twilio
 Flask~=3.0.3
+twilio~=9.3.4
+
+# Additional Libraries
+reportlab~=4.2.5
+tkcalendar~=1.6.1
+
+# Optional (uncomment only if you actively use these in your application)
+# pygame==2.5.2
+# trampoline==0.1.2
+# tbb==2021.13.0
+# packaging==24.1
