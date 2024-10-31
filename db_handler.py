@@ -1,20 +1,21 @@
 import sqlite3
 import os
 
+
 class Database:
     def __init__(self, db_path="C:\\Users\\Lucas Cabral\\PycharmProjects\\Python Mini Curso\\GOAT APP\\timesheet.db"):
         print(f"Attempting to connect to database at: {db_path}")
         if not os.path.exists(db_path):
             print(f"Database file '{db_path}' not found.")
             raise FileNotFoundError("The specified database file does not exist.")
-        
+
         try:
             self.connection = sqlite3.connect(db_path, check_same_thread=False)
             self.cursor = self.connection.cursor()
             print("Connected to SQLite database successfully.")
         except sqlite3.Error as e:
             print(f"Database connection error: {e}")
-    
+
     def query(self, sql, params=()):
         try:
             print(f"Executing SQL Query: {sql} with params: {params}")  # Detailed debug info
