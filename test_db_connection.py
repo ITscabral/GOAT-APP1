@@ -1,30 +1,27 @@
-# test_db_connection.py
 from db_handler import Database
 
-# Create an instance of Database
+# Initialize database connection
 try:
-    db = Database()
+    db = Database()  # Adjust path if needed
     print("Database connection successful.")
     
-    # Test login credentials with case- and space-insensitive logic
-    username_input = 'Michel Silva'  # Example: Michel Silva, michel silva, etc.
-    password_input = '123'
-
-    # Normalize username by converting to lowercase and removing spaces
-    normalized_username = username_input.strip().lower().replace(" ", "")
-    print(f"Testing login with normalized Username: '{normalized_username}' and Password: '{password_input}'")
+    # Test a direct query for a known user
+    username = 'Lucas Cabral'  # Adjust username to match your data
+    password = '123'
     
-    # Execute the query with normalization
+    # Normalize username by removing spaces and converting to lowercase
+    normalized_username = username.lower().replace(" ", "")
+    
+    # Execute query to test login credentials
     user = db.query(
         "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?",
-        (normalized_username, password_input)
+        (normalized_username, password)
     )
     
-    # Check and display the query result
+    # Check the query result
     if user:
-        print(f"Login successful for '{username_input}' with role: {user[0][0]}")
+        print(f"User found: {user}")
     else:
-        print(f"Login failed for '{username_input}'")
-
+        print("No matching user found. Check database entries and credentials.")
 except Exception as e:
-    print(f"Error connecting to database: {e}")
+    print(f"Error: {e}")
