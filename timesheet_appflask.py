@@ -120,9 +120,7 @@ def admin_dashboard():
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'],
-                                                                                                    "%H:%M") - timedelta(
-                minutes=30)).seconds / 3600.0, 2)
+            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
 
@@ -234,21 +232,4 @@ def generate_invoice_route():
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
             (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
         )
-        conn.commit()
-        conn.close()
-    except sqlite3.Error as e:
-        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
-
-    # Return the invoice as a PDF file
-    return send_file(filepath, as_attachment=False)
-
-# Route to download the timesheet.db file
-@app.route('/download_timesheet_db')
-def download_timesheet_db():
-    try:
-        return send_file('timesheet.db', as_attachment=True)
-    except Exception as e:
-        return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+        conn
