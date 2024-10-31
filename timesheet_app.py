@@ -60,6 +60,7 @@ class TimesheetApp:
         print(f"Login attempt with Username: {username} and Password: {password}")
         try:
             user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
+            print("Query result:", user)  # Debugging output
             if user:
                 role = user[0][0]
                 if role == 'admin':
