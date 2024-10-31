@@ -4,7 +4,7 @@ from tkinter import messagebox
 import uuid
 import sqlite3
 from dotenv import load_dotenv
-from db_handler import Database  # Updated import to avoid circular import
+from db_handler import Database
 from twilio.rest import Client
 
 class TimesheetApp:
