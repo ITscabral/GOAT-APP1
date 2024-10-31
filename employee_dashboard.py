@@ -104,10 +104,7 @@ class EmployeeDashboard:
         tree.grid(row=row, column=0, columnspan=2, padx=10, pady=5)
         return tree
 
-def generate_invoice(self):
-    """Generate a PDF invoice for the employee's time entries."""
-    try:
-        # Step 1: Fetch timesheet data and calculate hours
+    def generate_invoice(self):
         timesheet_data = [
             (entry[0], entry[1], entry[2], self.calculate_hours(entry[1], entry[2]))
             for entry in self.db.query(
@@ -115,41 +112,13 @@ def generate_invoice(self):
                 (self.username,)
             )
         ]
-        
-        # Step 2: Calculate the total hours
         total_hours = sum(entry[3] for entry in timesheet_data)
-        
-        # Step 3: Fetch the next invoice number
         invoice_number = self.db.get_next_invoice_number()
-        
-        # Step 4: Define and create the filename for the invoice
-        filename = f"Invoice_{invoice_number}_{self.username}.pdf"
-        
-        # Step 5: Generate the invoice PDF
-        from invoice_generator import generate_invoice
-        result_filepath = generate_invoice(invoice_number, self.username, {}, timesheet_data, total_hours)
-
-        # Step 6: Check if the file was generated successfully
-        if result_filepath and os.path.exists(result_filepath):
-            print(f"Invoice generated successfully at: {result_filepath}")
-            
-            # Step 7: Save the invoice metadata to the database
-            self.db.save_invoice(invoice_number, self.username, total_hours, total_hours * 30, filename)
-            
-            # Step 8: Open the generated invoice PDF
-            from utils import open_invoice
-            open_invoice(filename)
-            
-            # Step 9: Set invoice_generated flag and enable the Send button
-            self.invoice_generated = True
-            self.send_button.config(state=tk.NORMAL)
-            messagebox.showinfo("Invoice", f"Invoice generated successfully: {filename}")
-        else:
-            print("Failed to generate invoice.")
-            messagebox.showerror("Invoice Error", "Failed to generate the invoice PDF.")
-    except Exception as e:
-        print(f"Exception during invoice generation: {e}")
-        messagebox.showerror("Invoice Error", f"Error generating invoice: {e}")
+        filename = generate_invoice(invoice_number, self.username, {}, timesheet_data, total_hours)
+        self.db.save_invoice(invoice_number, self.username, total_hours, total_hours * 30, filename)
+        open_invoice(filename)
+        self.invoice_generated = True
+        self.send_button.config(state=tk.NORMAL)
 
     def send_invoice(self):
         messagebox.showinfo("Invoice Sent", "Invoice sent successfully!")
