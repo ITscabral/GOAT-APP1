@@ -32,13 +32,15 @@ class TimesheetApp:
 
     def login(self):
     """Handle user login."""
-    username = self.username_entry.get().lower()  # Convert to lowercase for consistency
+    username = self.username_entry.get().strip().lower()  # Convert to lowercase and remove leading/trailing spaces
     password = self.password_entry.get()
     
     print(f"Login attempt with Username: {username} and Password: {password}")
     
     try:
-        user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username, password))
+        # Use LOWER(username) in both the database and input to ensure case insensitivity
+        user = self.db.query("SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?", 
+                             (username.replace(" ", ""), password))
         print("Query result:", user)
         if user:
             role = user[0][0]
