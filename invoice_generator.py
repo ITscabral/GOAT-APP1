@@ -1,36 +1,42 @@
 import os
+import logging
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
-
+    
     # Step 1: Define the specific folder path
-    target_directory = os.path.join(os.getcwd(), "invoices")  # Update folder to 'invoices'
-    print(f"[INFO] Target directory: {target_directory}")
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    target_directory = os.path.join(BASE_DIR, "invoices")  # Updated to use script's directory
+    logger.info(f"Target directory: {target_directory}")
 
     # Step 2: Ensure the directory exists
     if not os.path.exists(target_directory):
-        print("[INFO] Directory does not exist, creating it...")
+        logger.info("Directory does not exist, creating it...")
         os.makedirs(target_directory)
 
     # Step 3: Create the filename with the full path
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
-    print(f"[INFO] Full path to invoice: {filename}")
+    logger.info(f"Full path to invoice: {filename}")
 
     try:
         # Initialize PDF canvas
-        print(f"[INFO] Generating PDF at {filename}")
+        logger.info(f"Generating PDF at {filename}")
         c = canvas.Canvas(filename, pagesize=A4)
 
         # Optional: Add a logo if it exists
-        logo_path = "company_logo.png"
+        logo_path = os.path.join(BASE_DIR, "company_logo.png")
         if os.path.exists(logo_path):
             c.drawImage(logo_path, 30, 770, width=120, height=80)
         else:
-            print("[WARNING] Logo not found, skipping.")
+            logger.warning("Logo not found, skipping.")
 
         # Add Company Info
         c.setFont("Helvetica-Bold", 12)
@@ -75,29 +81,28 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
 
         # Save the PDF
         c.save()
-        print(f"[SUCCESS] PDF saved at {filename}")
+        logger.info(f"PDF saved at {filename}")
 
         # Validate the file exists after saving
         if os.path.exists(filename):
-            print(f"[INFO] File exists: {filename}")
+            logger.info(f"File exists: {filename}")
             return filename
         else:
             raise FileNotFoundError(f"File not found at: {filename}")
 
     except Exception as e:
-        print(f"[ERROR] Invoice generation failed: {e}")
+        logger.error(f"Invoice generation failed: {e}")
         return None
 
+# Note: The open_invoice function is intended for local use only and may not work on cloud deployment environments.
 def open_invoice(filename):
     """Open the generated PDF invoice using the native system viewer."""
     try:
-        print(f"[INFO] Attempting to open invoice: {filename}")
+        logger.info(f"Attempting to open invoice: {filename}")
 
-        # Check if the file exists
         if not os.path.exists(filename):
-            raise FileNotFoundError(f"[ERROR] File not found: {filename}")
+            raise FileNotFoundError(f"File not found: {filename}")
 
-        # Open file based on OS
         if os.name == 'nt':  # Windows
             os.startfile(filename)
         elif os.name == 'posix':  # macOS/Linux
@@ -106,4 +111,4 @@ def open_invoice(filename):
             raise OSError("Unsupported operating system.")
 
     except Exception as e:
-        print(f"[ERROR] Failed to open invoice: {e}")
+        logger.error(f"Failed to open invoice: {e}")
