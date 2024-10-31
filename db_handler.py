@@ -1,10 +1,8 @@
-# db_handler.py
 import sqlite3
 import os
 
 class Database:
     def __init__(self, db_path="C:\\Users\\Lucas Cabral\\PycharmProjects\\Python Mini Curso\\GOAT APP\\timesheet.db"):
-        # Ensure the database file path is correct
         print(f"Attempting to connect to database at: {db_path}")
         if not os.path.exists(db_path):
             print(f"Database file '{db_path}' not found.")
@@ -19,15 +17,18 @@ class Database:
     
     def query(self, sql, params=()):
         try:
-            print(f"Executing SQL Query: {sql} with params: {params}")  # Debugging output
+            print(f"Executing SQL Query: {sql} with params: {params}")  # Detailed debug info
             self.cursor.execute(sql, params)
-            return self.cursor.fetchall()
+            result = self.cursor.fetchall()
+            print(f"Query result: {result}")  # Show fetched results
+            return result
         except sqlite3.Error as e:
             print(f"SQL Query Error: {e}")
             return []
 
     def execute(self, sql, params=()):
         try:
+            print(f"Executing SQL Command: {sql} with params: {params}")
             self.cursor.execute(sql, params)
             self.connection.commit()
         except sqlite3.Error as e:
