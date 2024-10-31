@@ -58,32 +58,37 @@ def home():
     return render_template('index.html')
 
 @app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    # Process username to be case-insensitive and remove spaces
-    username = request.form.get('username').strip().lower().replace(" ", "")
-    password = request.form.get('password')
+    # Normalize username: strip spaces, lowercase, and remove internal spaces
+    input_username = request.form.get('username').strip().lower().replace(" ", "")
+    input_password = request.form.get('password')
     
-    if not username or not password:
+    if not input_username or not input_password:
         return jsonify({'message': 'Username and password are required'}), 400
 
+    print(f"Login attempt with Username: {input_username} and Password: {input_password}")
+    
+    # Connect to the database and query
     conn = get_db_connection()
     try:
-        # Adjust SQL to remove spaces in username, making it case- and space-insensitive
-        user = conn.execute(
-            "SELECT * FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?", 
-            (username, password)
-        ).fetchone()
-    except sqlite3.OperationalError as e:
-        return jsonify({'error': f"Database error: {e}. Please check your database structure."}), 500
-    finally:
+        query = "SELECT * FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
+        user = conn.execute(query, (input_username, input_password)).fetchone()
         conn.close()
 
-    if user:
-        if user['role'] == 'admin':
-            return redirect(url_for('admin_dashboard'))
-        elif user['role'] == 'employee':
-            return redirect(url_for('employee_dashboard', username=user['username']))
-    return jsonify({'message': 'Invalid credentials'}), 401
+        if user:
+            print(f"User found: {user['username']} with role {user['role']}")
+            if user['role'] == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            elif user['role'] == 'employee':
+                return redirect(url_for('employee_dashboard', username=user['username']))
+        else:
+            print("No matching user found in the database.")
+            return jsonify({'message': 'Invalid credentials'}), 401
+    except sqlite3.OperationalError as e:
+        print(f"Database error: {e}")
+        conn.close()
+        return jsonify({'error': f"Database error: {e}"}), 500
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
