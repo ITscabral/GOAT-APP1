@@ -45,6 +45,20 @@ def initialize_db():
         )
     ''')
 
+    # Insert sample data into users table
+    users_data = [
+        ('lucas_cabral', '123', 'employee', '1234567890'),
+        ('jackson_carneiro', '123', 'employee', '1234567891'),
+        ('michel_silva', '123', 'admin', '1234567892'),
+        ('bruno_vianello', '123', 'employee', '1234567893'),
+        ('thallys_carvalho', '123', 'employee', '1234567894'),
+        ('giulliano_cabral', '123', 'employee', '1234567895'),
+        ('pedro_cadenas', '123', 'employee', '1234567896'),
+        ('caio_henrique', '123', 'employee', '1234567897')
+    ]
+
+    cursor.executemany('INSERT OR IGNORE INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)', users_data)
+
     conn.commit()
     conn.close()
 
