@@ -7,7 +7,7 @@ import sqlite3
 from dotenv import load_dotenv
 from admin_dashboard import AdminDashboard
 from employee_dashboard import EmployeeDashboard
-from database import Database
+from db_handler import Database
 from twilio.rest import Client
 
 
