@@ -121,10 +121,15 @@ def admin_dashboard():
 
     # Fetch all employees
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
+    print(f"Debug: Retrieved employees - {employees}")
+
     # Fetch all time entries
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
+    print(f"Debug: Retrieved time entries - {entries}")
+
     # Fetch all invoices
     invoices = conn.execute('SELECT * FROM invoices').fetchall()
+    print(f"Debug: Retrieved invoices - {invoices}")
 
     conn.close()
 
@@ -217,6 +222,7 @@ def generate_invoice_route():
     # Fetch time entries for this employee
     conn = get_db_connection()
     entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
+    print(f"Debug: Retrieved time entries for invoice generation - {entries}")
     conn.close()
 
     if not entries:
@@ -231,26 +237,4 @@ def generate_invoice_route():
 
     # Generate Invoice Number
     conn = get_db_connection()
-    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
-    conn.close()
-
-    # Generate Invoice PDF
-    target_directory = os.path.join(os.getcwd(), "invoices")
-    if not os.path.exists(target_directory):
-        os.makedirs(target_directory)
-    filename = f"Invoice_{invoice_number}_{username}.pdf"
-    filepath = os.path.join(target_directory, filename)
-
-    # Use your existing `generate_invoice` function to create the PDF
-    result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
-
-    # Validate if the file was created
-    if result_filepath is None or not os.path.exists(result_filepath):
-        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
-
-    # Save Invoice Metadata to Database
-    try:
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
-            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice
