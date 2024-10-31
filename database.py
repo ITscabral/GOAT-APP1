@@ -63,3 +63,17 @@ class Database:
             "VALUES (?, ?, ?, ?, ?, ?)",
             (invoice_number, username, date, total_hours, total_payment, filename)
         )
+
+    def add_default_users(self):
+        """Add default users for testing."""
+        self.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ('admin', '123', 'admin'))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ('employee', '123', 'employee'))
+
+    def close(self):
+        self.conn.close()
+
+# Run setup if executed directly
+if __name__ == "__main__":
+    db = Database()
+    db.add_default_users()
+    db.close()
