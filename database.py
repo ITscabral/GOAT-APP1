@@ -17,7 +17,8 @@ class Database:
                 role TEXT,
                 phone_number TEXT,
                 reset_token TEXT,
-                first_login INTEGER DEFAULT 1
+                first_login INTEGER DEFAULT 1,
+                main_role TEXT
             )''')
 
         self.cursor.execute('''
@@ -67,10 +68,21 @@ class Database:
 
     def add_default_users(self):
         """Add default users for testing."""
-        self.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)", ('admin', '123', 'admin'))
-        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login) VALUES (?, ?, ?, ?)", ('employee1', '123', 'employee', 1))
-        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login) VALUES (?, ?, ?, ?)", ('employee2', '123', 'employee', 1))
-        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login) VALUES (?, ?, ?, ?)", ('employee3', '123', 'employee', 1))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('admin', '123', 'admin', 1, 'admin'))
+        # Team 1
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Jackson Carneiro', '123', 'employee', 1, 'driver'))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Lucas Cabral', '123', 'employee', 1, 'offsider'))
+        # Team 2
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Bruno Vianello', '123', 'employee', 1, 'driver'))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Caio Henrique', '123', 'employee', 1, 'offsider'))
+        # Team 3
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Michel Silva', '123', 'employee', 1, 'driver'))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Thalys Carvalho', '123', 'employee', 1, 'offsider'))
+        # Team 4
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Pedro Cadenas', '123', 'employee', 1, 'driver'))
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Giuliano Cabral', '123', 'employee', 1, 'offsider'))
+        # Additional Employee
+        self.execute("INSERT OR IGNORE INTO users (username, password, role, first_login, main_role) VALUES (?, ?, ?, ?, ?)", ('Matheus Lacerda', '123', 'employee', 1, 'dock receiver'))
 
     def update_password(self, username, new_password):
         """Update password for a user and set first_login to 0."""
