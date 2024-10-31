@@ -62,14 +62,14 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    username = request.form.get('username').strip().lower().replace(" ", "_")  # Convert to lowercase, remove spaces, replace spaces with underscores
+    username = request.form.get('username').strip()  # Remove leading and trailing spaces only
     password = request.form.get('password')
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
     conn = get_db_connection()
     try:
-        user = conn.execute('SELECT * FROM users WHERE LOWER(REPLACE(username, " ", "_")) = ?', (username,)).fetchone()
+        user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
         print(f"Debug: Queried user - {user}")  # Debugging information
     except sqlite3.OperationalError as e:
         return jsonify({'error': f"Database error: {e}. Please check your database structure."}), 500
@@ -154,7 +154,7 @@ def admin_dashboard():
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
-    entries = conn.execute('SELECT * FROM time_entries WHERE LOWER(REPLACE(username, " ", "_")) = ?', (username.lower().replace(" ", "_"),)).fetchall()
+    entries = conn.execute('SELECT * FROM time_entries WHERE username = ?', (username,)).fetchall()
     conn.close()
     entry_list = []
     for entry in entries:
@@ -169,7 +169,7 @@ def employee_dashboard(username):
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
-    username = request.form.get('username').strip().lower().replace(" ", "_")  # Convert to lowercase for case-insensitive match
+    username = request.form.get('username').strip()  # Remove leading and trailing spaces only
     date = request.form.get('date')
     start_time = request.form.get('start_time')
     end_time = request.form.get('end_time')
@@ -192,14 +192,14 @@ def add_time_entry():
 # Route to generate an invoice and return it as a PDF file
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
-    username = request.form.get('username').strip().lower().replace(" ", "_")
+    username = request.form.get('username').strip()
 
     if not username:
         return jsonify({'error': 'Username is required'}), 400
 
     # Fetch time entries for this employee
     conn = get_db_connection()
-    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "_")) = ?', (username,)).fetchall()
+    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
     conn.close()
 
     if not entries:
@@ -247,7 +247,7 @@ def generate_invoice_route():
 # Route to send an invoice via email or other means
 @app.route('/send_invoice', methods=['POST'])
 def send_invoice_route():
-    username = request.form.get('username').strip().lower().replace(" ", "_")
+    username = request.form.get('username').strip()
     invoice_number = request.form.get('invoice_number')
 
     if not username or not invoice_number:
