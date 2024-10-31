@@ -5,6 +5,7 @@ import os
 class Database:
     def __init__(self, db_path="C:\\Users\\Lucas Cabral\\PycharmProjects\\Python Mini Curso\\GOAT APP\\timesheet.db"):
         # Ensure the database file path is correct
+        print(f"Attempting to connect to database at: {db_path}")
         if not os.path.exists(db_path):
             print(f"Database file '{db_path}' not found.")
             raise FileNotFoundError("The specified database file does not exist.")
@@ -18,6 +19,7 @@ class Database:
     
     def query(self, sql, params=()):
         try:
+            print(f"Executing SQL Query: {sql} with params: {params}")  # Debugging output
             self.cursor.execute(sql, params)
             return self.cursor.fetchall()
         except sqlite3.Error as e:
