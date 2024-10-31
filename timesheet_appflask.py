@@ -286,19 +286,4 @@ def add_employee():
     phone_number = request.form.get('phone_number').strip()
 
     if not all([name, role, rate, abn, phone_number]):
-        return jsonify({'error': 'All fields are required!'}), 400
-
-    try:
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
-            (name.lower().replace(" ", "_"), '123', role, phone_number)
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_dashboard'))
-    except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+        return jsonify({'error': 'All fields are required
