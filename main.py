@@ -31,29 +31,31 @@ class TimesheetApp:
         setattr(self, f"{label.lower()}_entry", entry)  # Set the entry field to an instance variable
 
     def login(self):
-        """Handle user login."""
-        username = self.username_entry.get()
-        password = self.password_entry.get()
-        
-        print(f"Login attempt with Username: {username} and Password: {password}")
-        
-        try:
-            user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
-            if user:
-                role = user[0][0]
-                # Conditional imports to avoid circular dependency
-                if role == 'admin':
-                    from admin_dashboard import AdminDashboard
-                    AdminDashboard(self.root, self.db)
-                elif role == 'employee':
-                    from employee_dashboard import EmployeeDashboard
-                    EmployeeDashboard(self.root, self.db, username)
-            else:
-                print("Invalid credentials")
-                messagebox.showerror("Login Failed", "Invalid credentials!")
-        except sqlite3.Error as e:
-            print(f"Exception during login: {e}")
-            messagebox.showerror("Error", "An error occurred during login.")
+    """Handle user login."""
+    username = self.username_entry.get()
+    password = self.password_entry.get()
+    
+    print(f"Login attempt with Username: {username} and Password: {password}")
+    
+    try:
+        user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
+        print("Query result:", user)  # Debugging output
+        if user:
+            role = user[0][0]
+            print(f"User role found: {role}")
+            # Conditional imports to avoid circular dependency
+            if role == 'admin':
+                from admin_dashboard import AdminDashboard
+                AdminDashboard(self.root, self.db)
+            elif role == 'employee':
+                from employee_dashboard import EmployeeDashboard
+                EmployeeDashboard(self.root, self.db, username)
+        else:
+            print("Invalid credentials")
+            messagebox.showerror("Login Failed", "Invalid credentials!")
+    except sqlite3.Error as e:
+        print(f"Exception during login: {e}")
+        messagebox.showerror("Error", "An error occurred during login.")
 
     def clear_window(self):
         """Clear the current window of widgets."""
