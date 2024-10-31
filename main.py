@@ -32,18 +32,17 @@ class TimesheetApp:
 
     def login(self):
     """Handle user login."""
-    username = self.username_entry.get()
+    username = self.username_entry.get().lower()  # Convert to lowercase for consistency
     password = self.password_entry.get()
     
     print(f"Login attempt with Username: {username} and Password: {password}")
     
     try:
-        user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
-        print("Query result:", user)  # Debugging output
+        user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username, password))
+        print("Query result:", user)
         if user:
             role = user[0][0]
             print(f"User role found: {role}")
-            # Conditional imports to avoid circular dependency
             if role == 'admin':
                 from admin_dashboard import AdminDashboard
                 AdminDashboard(self.root, self.db)
