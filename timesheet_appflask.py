@@ -232,4 +232,32 @@ def generate_invoice_route():
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
             (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
         )
-        conn
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'invoice_number': invoice_number})
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+# Route to send an invoice via email or other means
+@app.route('/send_invoice', methods=['POST'])
+def send_invoice_route():
+    username = request.form.get('username')
+    invoice_number = request.form.get('invoice_number')
+
+    if not username or not invoice_number:
+        return jsonify({'error': 'Username and invoice number are required'}), 400
+
+    conn = get_db_connection()
+    invoice = conn.execute('SELECT * FROM invoices WHERE invoice_number = ?', (invoice_number,)).fetchone()
+    conn.close()
+
+    if not invoice:
+        return jsonify({'error': 'Invoice not found'}), 404
+
+    # Logic to send invoice (e.g., via email)
+    # For the sake of example, we'll assume the invoice is sent successfully
+
+    return jsonify({'success': True, 'message': 'Invoice sent successfully'})
+
+if __name__ == '__main__':
+    app.run(debug=True)
