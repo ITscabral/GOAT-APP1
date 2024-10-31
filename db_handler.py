@@ -3,7 +3,7 @@ import sqlite3
 import os
 
 class Database:
-    def __init__(self, db_path="timesheet.db"):
+    def __init__(self, db_path="C:\\Users\\Lucas Cabral\\PycharmProjects\\Python Mini Curso\\GOAT APP\\timesheet.db"):
         # Ensure the database file path is correct
         if not os.path.exists(db_path):
             print(f"Database file '{db_path}' not found.")
