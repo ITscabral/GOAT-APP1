@@ -86,28 +86,17 @@ def login():
     try:
         # Query for the exact username without altering it to ensure correct matching
         user = conn.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
-        if user:
-            print(f"Debug: User found - Username: {user['username']}, Password: {user['password']}, Role: {user['role']}")  # Debugging information
-        else:
-            print(f"Debug: No user found for username: {username}")
-            return jsonify({'message': 'Invalid credentials'}), 401
     except sqlite3.OperationalError as e:
         return jsonify({'error': f"Database error: {e}. Please check your database structure."}), 500
     finally:
         conn.close()
 
-    # Validate password
-    if user['password'] == password:
-        if user['role'].lower() == 'admin':
+    if user and user['password'] == password:
+        if user['role'] == 'admin':
             return redirect(url_for('admin_dashboard'))
-        elif user['role'].lower() == 'employee':
+        elif user['role'] == 'employee':
             return redirect(url_for('employee_dashboard', username=user['username']))
-        else:
-            print(f"Debug: Unrecognized role for username: {username}")
-            return jsonify({'message': 'Invalid role specified'}), 403
-    else:
-        print(f"Debug: Password mismatch for username: {username}")
-        return jsonify({'message': 'Invalid credentials'}), 401
+    return jsonify({'message': 'Invalid credentials'}), 401
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -119,17 +108,9 @@ def admin_dashboard():
         "Team 4": ["pedro_cadenas", "caio_henrique"],
     }
 
-    # Fetch all employees
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
-    print(f"Debug: Retrieved employees - {employees}")
-
-    # Fetch all time entries
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
-    print(f"Debug: Retrieved time entries - {entries}")
-
-    # Fetch all invoices
     invoices = conn.execute('SELECT * FROM invoices').fetchall()
-    print(f"Debug: Retrieved invoices - {invoices}")
 
     conn.close()
 
@@ -222,7 +203,6 @@ def generate_invoice_route():
     # Fetch time entries for this employee
     conn = get_db_connection()
     entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
-    print(f"Debug: Retrieved time entries for invoice generation - {entries}")
     conn.close()
 
     if not entries:
@@ -237,4 +217,56 @@ def generate_invoice_route():
 
     # Generate Invoice Number
     conn = get_db_connection()
-    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
+    conn.close()
+
+    # Generate Invoice PDF
+    target_directory = os.path.join(os.getcwd(), "invoices")
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
+    filename = f"Invoice_{invoice_number}_{username}.pdf"
+    filepath = os.path.join(target_directory, filename)
+
+    # Use your existing `generate_invoice` function to create the PDF
+    result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
+
+    # Validate if the file was created
+    if result_filepath is None or not os.path.exists(result_filepath):
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
+    # Save Invoice Metadata to Database
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'invoice_number': invoice_number})
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+# Route to send an invoice via email or other means
+@app.route('/send_invoice', methods=['POST'])
+def send_invoice_route():
+    username = request.form.get('username').strip()
+    invoice_number = request.form.get('invoice_number')
+
+    if not username or not invoice_number:
+        return jsonify({'error': 'Username and invoice number are required'}), 400
+
+    conn = get_db_connection()
+    invoice = conn.execute('SELECT * FROM invoices WHERE invoice_number = ?', (invoice_number,)).fetchone()
+    conn.close()
+
+    if not invoice:
+        return jsonify({'error': 'Invoice not found'}), 404
+
+    # Logic to send invoice (e.g., via email)
+    # For the sake of example, we'll assume the invoice is sent successfully
+
+    return jsonify({'success': True, 'message': 'Invoice sent successfully'})
+
+if __name__ == '__main__':
+    app.run(debug=True)
