@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 import sqlite3
 import os
 from datetime import datetime, timedelta
+import random
 
 app = Flask(__name__)
 
@@ -16,7 +17,8 @@ def initialize_db():
             username TEXT PRIMARY KEY,
             password TEXT NOT NULL,
             role TEXT NOT NULL,
-            phone_number TEXT
+            phone_number TEXT,
+            reset_code TEXT
         )
     ''')
 
@@ -46,17 +48,17 @@ def initialize_db():
 
     # Insert sample data into users table
     users_data = [
-        ('lucas_cabral', '123', 'employee', '1234567890'),
-        ('jackson_carneiro', '123', 'employee', '1234567891'),
-        ('michel_silva', '123', 'admin', '1234567892'),
-        ('bruno_vianello', '123', 'employee', '1234567893'),
-        ('thallys_carvalho', '123', 'employee', '1234567894'),
-        ('giulliano_cabral', '123', 'employee', '1234567895'),
-        ('pedro_cadenas', '123', 'employee', '1234567896'),
-        ('caio_henrique', '123', 'employee', '1234567897')
+        ('lucas_cabral', '123', 'employee', '1234567890', None),
+        ('jackson_carneiro', '123', 'employee', '1234567891', None),
+        ('michel_silva', '123', 'admin', '1234567892', None),
+        ('bruno_vianello', '123', 'employee', '1234567893', None),
+        ('thallys_carvalho', '123', 'employee', '1234567894', None),
+        ('giulliano_cabral', '123', 'employee', '1234567895', None),
+        ('pedro_cadenas', '123', 'employee', '1234567896', None),
+        ('caio_henrique', '123', 'employee', '1234567897', None)
     ]
 
-    cursor.executemany('INSERT OR IGNORE INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)', users_data)
+    cursor.executemany('INSERT OR IGNORE INTO users (username, password, role, phone_number, reset_code) VALUES (?, ?, ?, ?, ?)', users_data)
 
     conn.commit()
     conn.close()
@@ -268,18 +270,4 @@ def add_employee():
     if not all([name, role, phone_number]):
         return jsonify({'error': 'All fields are required!'}), 400
 
-    username = name.lower().replace(" ", "_")
-    try:
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
-            (username, '123', role, phone_number)
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_dashboard'))
-    except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
-
-if __name__ == '__main__':
-    app.run(debug=True)
+    username =
