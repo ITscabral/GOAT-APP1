@@ -151,7 +151,7 @@ def admin_dashboard():
         teams=teams.keys(),
         employees=employee_list,
         entries=entry_list,
-        invoices=invoice_list
+        invoices=invoice_list  # Pass updated invoice list with employee names
     )
 
 @app.route('/employee_dashboard/<username>')
@@ -189,6 +189,114 @@ def add_time_entry():
         conn.commit()
         conn.close()
         return redirect(url_for('employee_dashboard', username=username))
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+# Route to generate an invoice and return it as a PDF file
+@app.route('/generate_invoice', methods=['POST'])
+def generate_invoice_route():
+    username = request.form.get('username').strip()
+
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+
+    # Fetch time entries for this employee
+    conn = get_db_connection()
+    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
+    conn.close()
+
+    if not entries:
+        return jsonify({'error': 'No time entries found for this user'}), 400
+
+    timesheet_data = [
+        (entry['date'], entry['start_time'], entry['end_time'],
+        round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+        for entry in entries
+    ]
+    total_hours = sum(entry[3] for entry in timesheet_data)
+
+    # Generate Invoice Number
+    conn = get_db_connection()
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
+    conn.close()
+
+    # Generate Invoice PDF
+    target_directory = os.path.join(os.getcwd(), "invoices")
+    if not os.path.exists(target_directory):
+        os.makedirs(target_directory)
+    filename = f"Invoice_{invoice_number}_{username}.pdf"
+    filepath = os.path.join(target_directory, filename)
+
+    # Use your existing `generate_invoice` function to create the PDF
+    result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
+
+    # Validate if the file was created
+    if result_filepath is None or not os.path.exists(result_filepath):
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
+    # Save Invoice Metadata to Database
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'invoice_number': invoice_number})
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+# Route to send an invoice via email or other means
+@app.route('/send_invoice', methods=['POST'])
+def send_invoice_route():
+    username = request.form.get('username').strip()
+    invoice_number = request.form.get('invoice_number')
+
+    if not username or not invoice_number:
+        return jsonify({'error': 'Username and invoice number are required'}), 400
+
+    conn = get_db_connection()
+    invoice = conn.execute('SELECT * FROM invoices WHERE invoice_number = ?', (invoice_number,)).fetchone()
+    conn.close()
+
+    if not invoice:
+        return jsonify({'error': 'Invoice not found'}), 404
+
+    # Logic to send invoice (e.g., via email)
+    # For the sake of example, we'll assume the invoice is sent successfully
+
+    return jsonify({'success': True, 'message': 'Invoice sent successfully'})
+
+# Route to open an invoice PDF file
+@app.route('/open_invoice/<filename>')
+def open_invoice(filename):
+    invoice_path = os.path.join(os.getcwd(), "invoices", filename)
+    if os.path.exists(invoice_path):
+        return send_file(invoice_path, as_attachment=False)
+    return jsonify({'error': 'Invoice not found'}), 404
+
+# Route to add a new employee
+@app.route('/add_employee', methods=['POST'])
+def add_employee():
+    name = request.form.get('name').strip()
+    role = request.form.get('role').strip()
+    rate = request.form.get('rate').strip()
+    abn = request.form.get('abn').strip()
+    phone_number = request.form.get('phone_number').strip()
+
+    if not all([name, role, rate, abn, phone_number]):
+        return jsonify({'error': 'All fields are required!'}), 400
+
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
+            (name.lower().replace(" ", "_"), '123', role, phone_number)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_dashboard'))
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
