@@ -98,10 +98,13 @@ def login():
 
     # Validate password
     if user['password'] == password:
-        if user['role'] == 'admin':
+        if user['role'].lower() == 'admin':
             return redirect(url_for('admin_dashboard'))
-        elif user['role'] == 'employee':
+        elif user['role'].lower() == 'employee':
             return redirect(url_for('employee_dashboard', username=user['username']))
+        else:
+            print(f"Debug: Unrecognized role for username: {username}")
+            return jsonify({'message': 'Invalid role specified'}), 403
     else:
         print(f"Debug: Password mismatch for username: {username}")
         return jsonify({'message': 'Invalid credentials'}), 401
