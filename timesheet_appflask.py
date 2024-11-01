@@ -47,33 +47,29 @@ def initialize_db():
 # Call the initialization function
 initialize_db()
 
-# Get database connection
+def get_db_connection():
+    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 @app.route('/test_db')
 def test_db():
     conn = get_db_connection()
     try:
-        print("[DEBUG] Testing database access on Render...")
         users = conn.execute("SELECT * FROM users").fetchall()
         conn.close()
-        
         if users:
-            print(f"[DEBUG] Retrieved users: {[dict(user) for user in users]}")
             return jsonify({'message': "User data retrieved successfully", 'data': [dict(user) for user in users]})
         else:
-            print("[DEBUG] No user data found")
             return jsonify({'message': "No user data found in the database"})
     except Exception as e:
-        print(f"[ERROR] Database test failed: {e}")
         conn.close()
         return jsonify({'error': f"Database test failed: {str(e)}"}), 500
-
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-@app.route('/login', methods=['POST'])
-@app.route('/login', methods=['POST'])
 @app.route('/login', methods=['POST'])
 def login():
     # Normalize username
@@ -83,31 +79,23 @@ def login():
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
-    print(f"[DEBUG] Login attempt with normalized Username: '{username}' and Password: '{password}'")
-    
-    # Connect to the database
     conn = get_db_connection()
     try:
-        # SQL to handle case- and space-insensitive username matching
         query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
         user = conn.execute(query, (username, password)).fetchone()
         conn.close()
 
         if user:
             role = user['role']
-            print(f"[DEBUG] Login successful for user with role: {role}")
             if role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif role == 'employee':
                 return redirect(url_for('employee_dashboard', username=username))
         else:
-            print("[DEBUG] Invalid credentials")
             return jsonify({'message': 'Invalid credentials'}), 401
     except sqlite3.Error as e:
-        print(f"[ERROR] Database error: {e}")
         conn.close()
         return jsonify({'error': f"Database error: {e}"}), 500
-
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -144,9 +132,7 @@ def admin_dashboard():
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'],
-                                                                                                    "%H:%M") - timedelta(
-                minutes=30)).seconds / 3600.0, 2)
+            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
 
@@ -162,13 +148,7 @@ def admin_dashboard():
         }
         invoice_list.append(invoice_data)
 
-    return render_template(
-        'admin_dashboard.html',
-        teams=teams.keys(),
-        employees=employee_list,
-        entries=entry_list,
-        invoices=invoice_list
-    )
+    return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
 
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
@@ -190,11 +170,9 @@ def employee_dashboard(username):
         entry_list.append(entry_data)
     return render_template('employee_dashboard.html', username=username, entries=entry_list)
 
-# Other routes remain unchanged
-
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
-    username = request.form.get('username').lower()  # Convert to lowercase for case-insensitive match
+    username = request.form.get('username').lower()
     date = request.form.get('date')
     start_time = request.form.get('start_time')
     end_time = request.form.get('end_time')
@@ -214,7 +192,6 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-# Route to generate an invoice and return it as a PDF file
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username')
@@ -222,7 +199,6 @@ def generate_invoice_route():
     if not username:
         return jsonify({'error': 'Username is required'}), 400
 
-    # Fetch time entries for this employee
     conn = get_db_connection()
     entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
     conn.close()
@@ -232,31 +208,25 @@ def generate_invoice_route():
 
     timesheet_data = [
         (entry['date'], entry['start_time'], entry['end_time'],
-        round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+         round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
         for entry in entries
     ]
     total_hours = sum(entry[3] for entry in timesheet_data)
 
-    # Generate Invoice Number
     conn = get_db_connection()
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
     conn.close()
 
-    # Generate Invoice PDF
     target_directory = os.path.join(os.getcwd(), "invoices")
     if not os.path.exists(target_directory):
         os.makedirs(target_directory)
     filename = f"Invoice_{invoice_number}_{username}.pdf"
     filepath = os.path.join(target_directory, filename)
 
-    # Use your existing `generate_invoice` function to create the PDF
     result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
-
-    # Validate if the file was created
     if result_filepath is None or not os.path.exists(result_filepath):
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Save Invoice Metadata to Database
     try:
         conn = get_db_connection()
         conn.execute(
@@ -268,10 +238,8 @@ def generate_invoice_route():
     except sqlite3.Error as e:
         return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
 
-    # Return the invoice as a PDF file
     return send_file(filepath, as_attachment=False)
 
-# Route to download the timesheet.db file
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
     try:
