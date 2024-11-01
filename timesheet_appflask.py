@@ -263,12 +263,16 @@ def download_timesheet_db():
     except Exception as e:
         return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
         
-@app.route('/show_users')
-def show_users():
-    conn = get_db_connection()
-    users = conn.execute("SELECT username, password, role FROM users").fetchall()
-    conn.close()
-    return jsonify([dict(user) for user in users])
+@app.route('/send_invoice', methods=['POST'])
+def send_invoice():
+    # Placeholder functionality - replace with actual logic to send invoice
+    username = request.form.get('username')
+    invoice_number = request.form.get('invoice_number')
+    # Implement the logic to send the invoice, e.g., via email or other service
+
+    # For demonstration purposes, return a success message
+    return jsonify({'message': f'Invoice {invoice_number} sent successfully to {username}'})
+
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
