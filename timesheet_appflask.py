@@ -111,8 +111,6 @@ def login():
         return jsonify({'error': f"Unexpected error during login: {e}"}), 500
 
 
-
-
 @app.route('/admin_dashboard')
 def admin_dashboard():
     conn = get_db_connection()
@@ -254,7 +252,7 @@ def generate_invoice_route():
     except sqlite3.Error as e:
         return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
 
-    return send_file(filepath, as_attachment=False)
+    return send_file(filepath, as_attachment=False, mimetype='application/pdf')
 
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
