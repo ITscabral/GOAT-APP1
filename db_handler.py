@@ -1,9 +1,10 @@
 import sqlite3
 import os
 
-
 class Database:
     def __init__(self, db_path="C:\\Users\\Lucas Cabral\\PycharmProjects\\Python Mini Curso\\GOAT APP\\timesheet.db"):
+        # Use the environment variable for database path if provided
+        db_path = db_path or os.getenv("DATABASE_PATH", "timesheet.db")
         print(f"Attempting to connect to database at: {db_path}")
         if not os.path.exists(db_path):
             print(f"Database file '{db_path}' not found.")
