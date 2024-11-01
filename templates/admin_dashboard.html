@@ -101,7 +101,7 @@
                 <td>{{ invoice.date }}</td>
                 <td>{{ invoice.total_hours }}</td>
                 <td>{{ invoice.total_payment }}</td>
-                <td><a href="{{ url_for('open_invoice', filename=invoice.filename) }}" class="btn btn-primary">Open</a></td>
+                <td><a href="{{ url_for('open_invoice', filename=invoice.filename) }}" class="btn btn-primary" target="_blank">Open</a></td>
             </tr>
             {% endfor %}
             </tbody>
@@ -111,7 +111,7 @@
     <!-- Add New Employee Form -->
     <div id="addEmployeeSection" class="mt-5">
         <h2>Add New Employee</h2>
-        <form action="/add_employee" method="POST">
+        <form action="{{ url_for('add_employee') }}" method="POST">
             <div class="form-group">
                 <label for="name">Name:</label>
                 <input type="text" class="form-control" id="name" name="name" required>
