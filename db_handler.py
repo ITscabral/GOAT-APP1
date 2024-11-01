@@ -49,12 +49,7 @@ class Database:
             FOREIGN KEY (username) REFERENCES users (username)
         )''')
 
-        # Optionally, add a default admin user for testing
-        self.cursor.execute("INSERT OR IGNORE INTO users (username, password, role) VALUES (?, ?, ?)",
-                            ("michel_silva", "123", "admin"))
-        self.connection.commit()
-        print("Database initialized with default tables and data.")
-
+        
     def query(self, sql, params=()):
         try:
             print(f"Executing SQL Query: {sql} with params: {params}")
