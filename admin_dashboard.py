@@ -1,13 +1,13 @@
 import os
-import subprocess  # For native PDF opening
+import subprocess
 import tkinter as tk
 from datetime import datetime, timedelta
 from tkinter import ttk, messagebox
 
 from dotenv import load_dotenv
-from twilio.rest import Client  # Twilio for SMS notifications
+from twilio.rest import Client
 
-load_dotenv()  # Load the environment variables from the .env file
+load_dotenv()
 
 # Twilio credentials
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -19,11 +19,12 @@ class AdminDashboard:
     def __init__(self, root, db):
         self.root = root
         self.db = db
-        self.selected_invoice_filename = None  # Track the selected invoice filename
-        self.open_button = None  # Initialize open_button
+        self.selected_invoice_filename = None
+        self.open_button = None
         self.show_dashboard()
 
     def show_dashboard(self):
+        """Initialize the main dashboard UI."""
         self.clear_window()
 
         tk.Label(self.root, text="Admin Dashboard", font=("Arial", 16)).grid(row=0, columnspan=4, pady=10)
@@ -39,7 +40,7 @@ class AdminDashboard:
         self.employee_combobox.grid(row=1, column=3, padx=5, pady=5)
         self.employee_combobox.bind("<<ComboboxSelected>>", self.show_employee_entries)
 
-        # Time Entries and Invoice Display
+        # Display Time Entries and Invoices
         tk.Label(self.root, text="Time Entries", font=("Arial", 12)).grid(row=2, columnspan=4, pady=10)
         self.team_tree = self.create_tree_view(["Username", "Date", "Start", "End", "Total Hours"], 3)
 
@@ -54,10 +55,12 @@ class AdminDashboard:
         self.add_employee_form()
 
     def clear_window(self):
+        """Clear the main window of all widgets."""
         for widget in self.root.winfo_children():
             widget.destroy()
 
     def get_employees(self):
+        """Fetch the list of employees for the dropdown."""
         employees = self.db.query("SELECT username FROM users WHERE role = 'employee'")
         return [emp[0] for emp in employees]
 
@@ -71,6 +74,7 @@ class AdminDashboard:
         self.show_previous_invoices(selected_employee)
 
     def refresh_tree_view(self, tree, filter_value):
+        """Refresh the data in the tree view based on team or employee selection."""
         for row in tree.get_children():
             tree.delete(row)
 
@@ -97,8 +101,6 @@ class AdminDashboard:
         )
 
         for invoice in invoices:
-            print(f"Invoice Data Before Insertion: {invoice}")  # Debug print statement
-            # Insert invoice data into Treeview
             self.invoice_tree.insert("", tk.END, values=invoice)
 
     def on_invoice_selected(self, event):
@@ -107,7 +109,7 @@ class AdminDashboard:
         if selected_item:
             invoice = self.invoice_tree.item(selected_item)['values']
             if len(invoice) >= 5:
-                self.selected_invoice_filename = invoice[4]  # Assuming the filename is the fifth element in the row
+                self.selected_invoice_filename = invoice[4]
                 self.open_button.config(state=tk.NORMAL)
             else:
                 self.selected_invoice_filename = None
@@ -115,7 +117,7 @@ class AdminDashboard:
                 messagebox.showerror("Error", "Filename not found in the selected invoice data.")
 
     def open_selected_invoice(self):
-        """Open the selected invoice in the native PDF viewer."""
+        """Open the selected invoice in the default PDF viewer."""
         if not self.selected_invoice_filename:
             messagebox.showerror("Error", "No invoice selected.")
             return
@@ -137,11 +139,13 @@ class AdminDashboard:
             print(f"Invoice file not found: {self.selected_invoice_filename}")
 
     def calculate_hours(self, start, end):
+        """Calculate the total hours between start and end times, minus a 30-minute break."""
         start_dt = datetime.strptime(start, "%H:%M")
         end_dt = datetime.strptime(end, "%H:%M")
         return round((end_dt - start_dt - timedelta(minutes=30)).seconds / 3600, 2)
 
     def add_employee_form(self):
+        """Display the form to add a new employee."""
         tk.Label(self.root, text="Add New Employee", font=("Arial", 12)).grid(row=7, column=0, columnspan=4, pady=10)
 
         self.name_entry = self.create_input("Name", 8)
@@ -153,6 +157,7 @@ class AdminDashboard:
         tk.Button(self.root, text="Add Employee", command=self.add_employee).grid(row=13, columnspan=4, pady=10)
 
     def add_employee(self):
+        """Add a new employee to the database."""
         name = self.name_entry.get()
         main_role = self.main_role_combobox.get()
         rate = self.rate_entry.get()
@@ -176,6 +181,7 @@ class AdminDashboard:
             messagebox.showerror("Error", f"Failed to add employee: {e}")
 
     def send_sms(self, to_number, message):
+        """Send an SMS notification using Twilio."""
         try:
             client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
             client.messages.create(body=message, from_=TWILIO_PHONE_NUMBER, to=to_number)
@@ -184,18 +190,21 @@ class AdminDashboard:
             messagebox.showerror("Error", f"Failed to send SMS: {e}")
 
     def create_input(self, label, row):
+        """Helper to create input fields."""
         tk.Label(self.root, text=f"{label}:").grid(row=row, column=0, padx=5, pady=5)
         entry = tk.Entry(self.root)
         entry.grid(row=row, column=1, padx=5, pady=5)
         return entry
 
     def create_combobox(self, label, values, row):
+        """Helper to create comboboxes."""
         tk.Label(self.root, text=f"{label}:").grid(row=row, column=0, padx=5, pady=5)
         combobox = ttk.Combobox(self.root, values=values)
         combobox.grid(row=row, column=1, padx=5, pady=5)
         return combobox
 
     def create_tree_view(self, columns, row):
+        """Helper to create a tree view widget."""
         tree = ttk.Treeview(self.root, columns=columns, show='headings', height=10)
         for col in columns:
             tree.heading(col, text=col)
