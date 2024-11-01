@@ -59,38 +59,40 @@ def home():
 
 @app.route('/login', methods=['POST'])
 @app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
-    # Process username to be case-insensitive and remove spaces
+    # Normalize username
     username = request.form.get('username').strip().lower().replace(" ", "")
     password = request.form.get('password')
     
     if not username or not password:
         return jsonify({'message': 'Username and password are required'}), 400
 
-    print(f"Login attempt with normalized Username: {username} and Password: {password}")
+    print(f"[DEBUG] Login attempt with normalized Username: '{username}' and Password: '{password}'")
     
     # Connect to the database
     conn = get_db_connection()
     try:
-        # Use SQL to handle case- and space-insensitive username matching
+        # SQL to handle case- and space-insensitive username matching
         query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
         user = conn.execute(query, (username, password)).fetchone()
         conn.close()
 
         if user:
             role = user['role']
-            print(f"Login successful for user with role: {role}")
+            print(f"[DEBUG] Login successful for user with role: {role}")
             if role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif role == 'employee':
                 return redirect(url_for('employee_dashboard', username=username))
         else:
-            print("Invalid credentials")
+            print("[DEBUG] Invalid credentials")
             return jsonify({'message': 'Invalid credentials'}), 401
     except sqlite3.Error as e:
-        print(f"Database error: {e}")
+        print(f"[ERROR] Database error: {e}")
         conn.close()
         return jsonify({'error': f"Database error: {e}"}), 500
+
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
