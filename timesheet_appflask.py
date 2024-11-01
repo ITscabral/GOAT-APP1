@@ -72,20 +72,23 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    # Normalize username
-    username = request.form.get('username').strip().lower().replace(" ", "")
-    password = request.form.get('password')
-    
-    if not username or not password:
-        return jsonify({'message': 'Username and password are required'}), 400
-
-    print(f"[DEBUG] Login attempt with normalized Username: '{username}' and Password: '{password}'")
-    
-    # Connect to the database
-    conn = get_db_connection()
     try:
-        # SQL to handle case- and space-insensitive username matching
+        # Normalize username
+        username = request.form.get('username').strip().lower().replace(" ", "")
+        password = request.form.get('password')
+        
+        if not username or not password:
+            print("[DEBUG] Username or password missing in form data")
+            return jsonify({'message': 'Username and password are required'}), 400
+
+        print(f"[DEBUG] Login attempt with normalized Username: '{username}' and Password: '{password}'")
+        
+        # Connect to the database
+        conn = get_db_connection()
         query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
+        
+        # Execute query with debug logs
+        print(f"[DEBUG] Executing login query: {query} with params: ({username}, {password})")
         user = conn.execute(query, (username, password)).fetchone()
         conn.close()
 
@@ -99,10 +102,14 @@ def login():
         else:
             print("[DEBUG] Invalid credentials: No match found in database")
             return jsonify({'message': 'Invalid credentials'}), 401
+
     except sqlite3.Error as e:
-        print(f"[ERROR] Database error: {e}")
-        conn.close()
-        return jsonify({'error': f"Database error: {e}"}), 500
+        print(f"[ERROR] Database error during login: {e}")
+        return jsonify({'error': f"Database error during login: {e}"}), 500
+    except Exception as e:
+        print(f"[ERROR] Unexpected error during login: {e}")
+        return jsonify({'error': f"Unexpected error during login: {e}"}), 500
+
 
 
 
