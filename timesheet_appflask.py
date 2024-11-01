@@ -72,30 +72,36 @@ def home():
 
 @app.route('/login', methods=['POST'])
 def login():
-    # Normalize username
+    # Normalize the username to make it case- and space-insensitive
     username = request.form.get('username').strip().lower().replace(" ", "")
     password = request.form.get('password')
     
     if not username or not password:
+        print("[DEBUG] Username or password missing")
         return jsonify({'message': 'Username and password are required'}), 400
+
+    print(f"[DEBUG] Attempting login with normalized Username: '{username}' and Password: '{password}'")
 
     conn = get_db_connection()
     try:
+        # SQL to match username format
         query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
+        print(f"[DEBUG] Running query: {query} with params: ({username}, {password})")
         user = conn.execute(query, (username, password)).fetchone()
         conn.close()
 
         if user:
             role = user['role']
-            if role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            elif role == 'employee':
-                return redirect(url_for('employee_dashboard', username=username))
+            print(f"[DEBUG] Login successful for role: {role}")
+            return redirect(url_for(f"{role}_dashboard"))  # Directs to `admin_dashboard` or `employee_dashboard`
         else:
+            print("[DEBUG] Invalid credentials - no matching user found")
             return jsonify({'message': 'Invalid credentials'}), 401
     except sqlite3.Error as e:
+        print(f"[ERROR] Database error: {e}")
         conn.close()
         return jsonify({'error': f"Database error: {e}"}), 500
+
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
