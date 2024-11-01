@@ -255,6 +255,13 @@ def download_timesheet_db():
         return send_file('timesheet.db', as_attachment=True)
     except Exception as e:
         return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
+        
+@app.route('/show_users')
+def show_users():
+    conn = get_db_connection()
+    users = conn.execute("SELECT username, password, role FROM users").fetchall()
+    conn.close()
+    return jsonify([dict(user) for user in users])
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
