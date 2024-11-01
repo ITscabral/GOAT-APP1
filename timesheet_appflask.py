@@ -48,10 +48,25 @@ def initialize_db():
 initialize_db()
 
 # Get database connection
-def get_db_connection():
-    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+@app.route('/test_db')
+def test_db():
+    conn = get_db_connection()
+    try:
+        print("[DEBUG] Testing database access on Render...")
+        users = conn.execute("SELECT * FROM users").fetchall()
+        conn.close()
+        
+        if users:
+            print(f"[DEBUG] Retrieved users: {[dict(user) for user in users]}")
+            return jsonify({'message': "User data retrieved successfully", 'data': [dict(user) for user in users]})
+        else:
+            print("[DEBUG] No user data found")
+            return jsonify({'message': "No user data found in the database"})
+    except Exception as e:
+        print(f"[ERROR] Database test failed: {e}")
+        conn.close()
+        return jsonify({'error': f"Database test failed: {str(e)}"}), 500
+
 
 @app.route('/')
 def home():
