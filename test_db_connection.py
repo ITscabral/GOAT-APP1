@@ -1,27 +1,22 @@
 from db_handler import Database
 
-# Initialize database connection
+# Instantiate the Database class
 try:
-    db = Database()  # Adjust path if needed
+    db = Database()
     print("Database connection successful.")
-    
-    # Test a direct query for a known user
-    username = 'Lucas Cabral'  # Adjust username to match your data
+
+    # Test login credentials, remove spaces, and make lowercase
+    username = 'Michel Silva'.replace(" ", "").lower()
     password = '123'
-    
-    # Normalize username by removing spaces and converting to lowercase
-    normalized_username = username.lower().replace(" ", "")
-    
-    # Execute query to test login credentials
     user = db.query(
         "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?",
-        (normalized_username, password)
+        (username, password)
     )
     
-    # Check the query result
+    # Check result and print output
     if user:
-        print(f"User found: {user}")
+        print(f"Login successful for '{username}' with role: {user[0][0]}")
     else:
-        print("No matching user found. Check database entries and credentials.")
+        print("Invalid credentials or user not found.")
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"Error connecting to database: {e}")
