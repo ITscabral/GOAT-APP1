@@ -207,12 +207,14 @@ def add_time_entry():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/generate_invoice', methods=['POST'])
+@app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username')
 
     if not username:
         return jsonify({'error': 'Username is required'}), 400
 
+    # Fetch time entries for the employee
     conn = get_db_connection()
     entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
     conn.close()
@@ -231,28 +233,30 @@ def generate_invoice_route():
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
     conn.close()
 
-    target_directory = os.path.join(os.getcwd(), "invoices")
-    if not os.path.exists(target_directory):
-        os.makedirs(target_directory)
-    filename = f"Invoice_{invoice_number}_{username}.pdf"
-    filepath = os.path.join(target_directory, filename)
+    company_info = {
+        "Company Name": "GOAT Removals",
+        "Address": "123 Business St, Sydney, Australia",
+        "Phone": "+61 2 1234 5678"
+    }
 
-    result_filepath = generate_invoice(invoice_number, username, {}, timesheet_data, total_hours)
-    if result_filepath is None or not os.path.exists(result_filepath):
+    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
+    if filepath is None or not os.path.exists(filepath):
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
     try:
         conn = get_db_connection()
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
-            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filename)
+            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filepath)
         )
         conn.commit()
         conn.close()
     except sqlite3.Error as e:
         return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
 
-    return send_file(filepath, as_attachment=False, mimetype='application/pdf')
+    # Return the file as a downloadable PDF
+    return send_file(filepath, as_attachment=True)
+
 
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
