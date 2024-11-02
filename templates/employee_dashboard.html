@@ -97,48 +97,33 @@
 
 <script>
     document.getElementById("generateInvoiceForm").onsubmit = function(event) {
-        event.preventDefault();
-
+        // Proceed with form submission and fetch the response
         fetch(this.action, {
             method: 'POST',
             body: new FormData(this)
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Enable "Send Invoice" button
-                const sendInvoiceButton = document.getElementById("sendInvoiceButton");
-                sendInvoiceButton.disabled = false;
-                sendInvoiceButton.classList.remove('btn-secondary');
-                sendInvoiceButton.classList.add('btn-success');
-
-                // Set the invoice number to a hidden field
-                document.getElementById("invoiceNumber").value = data.invoice_number;
-
-                // Alert the user
-                alert("Invoice generated successfully!");
-            } else {
-                alert("Error generating invoice: " + data.error);
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok ' + response.statusText);
             }
+            return response.blob(); // Return response as a Blob
         })
-        .catch(error => console.error('Error:', error));
-    };
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `Invoice_${new Date().toISOString()}.pdf`;  // Dynamic filename
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+        })
+        .catch(error => {
+            console.error('Error generating invoice:', error);
+            alert("Error generating invoice.");
+        });
 
-    // Send Invoice Button Handler
-    document.getElementById("sendInvoiceButton").onclick = function() {
-        fetch(document.getElementById("sendInvoiceForm").action, {
-            method: 'POST',
-            body: new FormData(document.getElementById("sendInvoiceForm"))
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.message) {
-                alert(data.message);
-            } else {
-                alert("Error sending invoice: " + data.error);
-            }
-        })
-        .catch(error => console.error('Error:', error));
+        event.preventDefault(); // Prevents form from submitting normally
     };
 </script>
 
