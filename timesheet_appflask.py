@@ -239,6 +239,10 @@ def generate_invoice_route():
     except sqlite3.Error as e:
         return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
 
+    # Log the successful invoice generation
+    print(f"Generated and saved invoice: {filepath}")
+
+    # Return the file as a downloadable PDF
     return send_file(filepath, as_attachment=True)
 
 @app.route('/download_timesheet_db')
