@@ -82,10 +82,10 @@
     <div id="invoiceActions" class="mt-5">
         <h3>Invoice Actions</h3>
         <!-- Generate Invoice Form -->
-<form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
-    <input type="hidden" name="username" value="{{ username }}">
-    <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
-</form>
+        <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
+        </form>
         <!-- Send Invoice Form -->
         <form id="sendInvoiceForm" action="{{ url_for('send_invoice') }}" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
@@ -97,7 +97,7 @@
 
 <script>
     document.getElementById("generateInvoiceForm").onsubmit = function(event) {
-        event.preventDefault(); // Prevent default form submission
+        event.preventDefault();
 
         fetch(this.action, {
             method: 'POST',
