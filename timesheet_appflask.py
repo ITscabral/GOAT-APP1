@@ -200,14 +200,20 @@ def generate_invoice_route():
     if not username:
         return jsonify({'error': 'Username is required'}), 400
 
-    # Fetch time entries for the employee
+    # Connect to the database
     conn = get_db_connection()
-    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
+    
+    # Fetch time entries for the employee
+    entries = conn.execute(
+        'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
+        (username,)
+    ).fetchall()
     
     if not entries:
         conn.close()
         return jsonify({'error': 'No time entries found for this user'}), 400
 
+    # Prepare timesheet data and calculate total hours
     timesheet_data = [
         (entry['date'], entry['start_time'], entry['end_time'],
          round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
@@ -215,45 +221,56 @@ def generate_invoice_route():
     ]
     total_hours = sum(entry[3] for entry in timesheet_data)
 
-    # Check for duplicate invoice
+    # Get today's date for invoice date
     invoice_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Check for duplicate invoice by looking for an identical date, username, and total_hours
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
         (username, invoice_date, total_hours)
     ).fetchone()
 
+    # Log the duplicate check result
+    print(f"[DEBUG] Checking for duplicate invoices for {username} on {invoice_date} with total hours: {total_hours}")
     if existing_invoice:
         conn.close()
-        return jsonify({'error': 'An identical invoice already exists.'}), 400
+        print("[DEBUG] Duplicate invoice found, aborting creation.")
+        return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
 
-    # Create new invoice if no duplicate is found
+    # If no duplicate is found, proceed to create a new invoice
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
 
+    # Company details
     company_info = {
         "Company Name": "GOAT Removals",
         "Address": "123 Business St, Sydney, Australia",
         "Phone": "+61 2 1234 5678"
     }
 
+    # Generate the invoice PDF
     filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
     if filepath is None or not os.path.exists(filepath):
         conn.close()
+        print("[ERROR] Failed to generate or locate the invoice file.")
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
+    # Save the invoice to the database
     try:
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
             (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
         )
         conn.commit()
+        print(f"[DEBUG] Invoice successfully created and saved: {filepath}")
     except sqlite3.Error as e:
-        conn.close()
+        print(f"[ERROR] Database error while saving invoice: {e}")
         return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
     finally:
         conn.close()
 
-    print(f"Generated and saved invoice: {filepath}")
+    # Return the generated PDF file
     return send_file(filepath, as_attachment=True)
+
 
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
