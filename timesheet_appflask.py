@@ -257,7 +257,6 @@ def generate_invoice_route():
     # Return the file as a downloadable PDF
     return send_file(filepath, as_attachment=True)
 
-
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
     try:
