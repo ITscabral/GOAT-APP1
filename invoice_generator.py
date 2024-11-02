@@ -70,17 +70,8 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
     except Exception as e:
         logger.error(f"Invoice generation failed: {e}")
         return None
-Save invoice_generator.py with these updates.
 
-Step 2: Update timesheet_appflask.py to Trigger Invoice Generation
-In timesheet_appflask.py, you need to:
 
-Modify the generate_invoice_route function to call generate_invoice, save the invoice in the database, and then return the PDF for download.
-Here’s the final generate_invoice_route function:
-
-python
-Copy code
-from flask import send_file
 
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
