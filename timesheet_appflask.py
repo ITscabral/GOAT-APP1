@@ -73,43 +73,30 @@ def home():
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        # Normalize username
         username = request.form.get('username').strip().lower().replace(" ", "")
         password = request.form.get('password')
         
         if not username or not password:
-            print("[DEBUG] Username or password missing in form data")
             return jsonify({'message': 'Username and password are required'}), 400
 
-        print(f"[DEBUG] Login attempt with normalized Username: '{username}' and Password: '{password}'")
-        
-        # Connect to the database
         conn = get_db_connection()
         query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
-        
-        # Execute query with debug logs
-        print(f"[DEBUG] Executing login query: {query} with params: ({username}, {password})")
         user = conn.execute(query, (username, password)).fetchone()
         conn.close()
 
         if user:
             role = user['role']
-            print(f"[DEBUG] Login successful for user with role: {role}")
             if role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif role == 'employee':
                 return redirect(url_for('employee_dashboard', username=username))
         else:
-            print("[DEBUG] Invalid credentials: No match found in database")
             return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
-        print(f"[ERROR] Database error during login: {e}")
         return jsonify({'error': f"Database error during login: {e}"}), 500
     except Exception as e:
-        print(f"[ERROR] Unexpected error during login: {e}")
         return jsonify({'error': f"Unexpected error during login: {e}"}), 500
-
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -207,14 +194,12 @@ def add_time_entry():
         return jsonify({'error': str(e)}), 500
 
 @app.route('/generate_invoice', methods=['POST'])
-@app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username')
 
     if not username:
         return jsonify({'error': 'Username is required'}), 400
 
-    # Fetch time entries for the employee
     conn = get_db_connection()
     entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
     conn.close()
@@ -254,7 +239,6 @@ def generate_invoice_route():
     except sqlite3.Error as e:
         return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
 
-    # Return the file as a downloadable PDF
     return send_file(filepath, as_attachment=True)
 
 @app.route('/download_timesheet_db')
@@ -263,17 +247,12 @@ def download_timesheet_db():
         return send_file('timesheet.db', as_attachment=True)
     except Exception as e:
         return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
-        
+
 @app.route('/send_invoice', methods=['POST'])
 def send_invoice():
-    # Placeholder functionality - replace with actual logic to send invoice
     username = request.form.get('username')
     invoice_number = request.form.get('invoice_number')
-    # Implement the logic to send the invoice, e.g., via email or other service
-
-    # For demonstration purposes, return a success message
     return jsonify({'message': f'Invoice {invoice_number} sent successfully to {username}'})
-
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
