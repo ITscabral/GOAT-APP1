@@ -74,7 +74,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
 
 
 @app.route('/generate_invoice', methods=['POST'])
-def generate_invoice_route():
+def generate_invoice():
     username = request.form.get('username')
 
     if not username:
