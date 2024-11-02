@@ -58,4 +58,3 @@ class Database:
             print("Invoice saved successfully.")
         except sqlite3.Error as e:
             print(f"Error saving invoice: {e}")
-
