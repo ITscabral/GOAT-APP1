@@ -11,52 +11,38 @@ logger = logging.getLogger(__name__)
 
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
-    
-    # Step 1: Define the specific folder path
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    target_directory = os.path.join(BASE_DIR, "invoices")  # Updated to use script's directory
+    target_directory = os.path.join(BASE_DIR, "invoices")
     logger.info(f"Target directory: {target_directory}")
 
-    # Step 2: Ensure the directory exists
     if not os.path.exists(target_directory):
-        logger.info("Directory does not exist, creating it...")
         os.makedirs(target_directory)
 
-    # Step 3: Create the filename with the full path
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
     logger.info(f"Full path to invoice: {filename}")
 
     try:
-        # Initialize PDF canvas
-        logger.info(f"Generating PDF at {filename}")
         c = canvas.Canvas(filename, pagesize=A4)
-
-        # Optional: Add a logo if it exists
         logo_path = os.path.join(BASE_DIR, "company_logo.png")
         if os.path.exists(logo_path):
             c.drawImage(logo_path, 30, 770, width=120, height=80)
         else:
             logger.warning("Logo not found, skipping.")
 
-        # Add Company Info
         c.setFont("Helvetica-Bold", 12)
         c.drawString(150, 800, company_info.get("Company Name", "GOAT Removals"))
         c.setFont("Helvetica", 10)
         c.drawString(150, 780, company_info.get("Address", "123 Business St, Sydney, Australia"))
         c.drawString(150, 765, f"Phone: {company_info.get('Phone', '+61 2 1234 5678')}")
 
-        # Add Invoice Header
         c.setFont("Helvetica-Bold", 16)
         c.drawString(230, 720, f"Invoice #{invoice_number}")
-
-        # Add Employee Name and Date
         date_generated = datetime.now().strftime('%Y-%m-%d %A')
         c.setFont("Helvetica-Bold", 12)
         c.drawString(30, 690, f"Employee: {employee_name}")
         c.setFont("Helvetica", 10)
         c.drawString(30, 670, f"Date Generated: {date_generated}")
 
-        # Add Table Data
         y = 640
         for entry in timesheet_data:
             date, start, end, hours = entry
@@ -68,7 +54,6 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
             c.drawString(350, y, f"{hours:.2f}")
             y -= 20
 
-        # Summary and Footer
         total_payment = total_hours * hourly_rate
         c.setFont("Helvetica-Bold", 12)
         c.drawString(30, y - 30, f"Total Hours: {total_hours:.2f}")
@@ -78,21 +63,74 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.setFont("Helvetica", 8)
         c.setFillColor(colors.grey)
         c.drawString(30, 50, "Thank you for your work! If you have any questions, contact our office.")
-
-        # Save the PDF
         c.save()
         logger.info(f"PDF saved at {filename}")
 
-        # Validate the file exists after saving
-        if os.path.exists(filename):
-            logger.info(f"File exists: {filename}")
-            return filename
-        else:
-            raise FileNotFoundError(f"File not found at: {filename}")
-
+        return filename if os.path.exists(filename) else None
     except Exception as e:
         logger.error(f"Invoice generation failed: {e}")
         return None
+Save invoice_generator.py with these updates.
+
+Step 2: Update timesheet_appflask.py to Trigger Invoice Generation
+In timesheet_appflask.py, you need to:
+
+Modify the generate_invoice_route function to call generate_invoice, save the invoice in the database, and then return the PDF for download.
+Here’s the final generate_invoice_route function:
+
+python
+Copy code
+from flask import send_file
+
+@app.route('/generate_invoice', methods=['POST'])
+def generate_invoice_route():
+    username = request.form.get('username')
+
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+
+    # Fetch time entries for the employee
+    conn = get_db_connection()
+    entries = conn.execute('SELECT date, start_time, end_time FROM time_entries WHERE username = ?', (username,)).fetchall()
+    conn.close()
+
+    if not entries:
+        return jsonify({'error': 'No time entries found for this user'}), 400
+
+    timesheet_data = [
+        (entry['date'], entry['start_time'], entry['end_time'],
+         round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+        for entry in entries
+    ]
+    total_hours = sum(entry[3] for entry in timesheet_data)
+
+    conn = get_db_connection()
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
+    conn.close()
+
+    company_info = {
+        "Company Name": "GOAT Removals",
+        "Address": "123 Business St, Sydney, Australia",
+        "Phone": "+61 2 1234 5678"
+    }
+
+    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
+    if filepath is None or not os.path.exists(filepath):
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_hours * 30, filepath)
+        )
+        conn.commit()
+        conn.close()
+    except sqlite3.Error as e:
+        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
+
+    # Return the file as a downloadable PDF
+    return send_file(filepath, as_attachment=True)
 
 # Note: The open_invoice function is intended for local use only and may not work on cloud deployment environments.
 def open_invoice(filename):
