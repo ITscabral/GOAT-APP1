@@ -202,13 +202,13 @@ def generate_invoice_route():
 
     # Connect to the database
     conn = get_db_connection()
-    
+
     # Fetch time entries for the employee
     entries = conn.execute(
         'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
         (username,)
     ).fetchall()
-    
+
     if not entries:
         conn.close()
         return jsonify({'error': 'No time entries found for this user'}), 400
@@ -230,11 +230,8 @@ def generate_invoice_route():
         (username, invoice_date, total_hours)
     ).fetchone()
 
-    # Log the duplicate check result
-    print(f"[DEBUG] Checking for duplicate invoices for {username} on {invoice_date} with total hours: {total_hours}")
     if existing_invoice:
         conn.close()
-        print("[DEBUG] Duplicate invoice found, aborting creation.")
         return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
 
     # If no duplicate is found, proceed to create a new invoice
@@ -249,9 +246,11 @@ def generate_invoice_route():
 
     # Generate the invoice PDF
     filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
+
+    # Verify that the PDF was successfully created
     if filepath is None or not os.path.exists(filepath):
         conn.close()
-        print("[ERROR] Failed to generate or locate the invoice file.")
+        print("[ERROR] Invoice file was not created.")
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
     # Save the invoice to the database
@@ -261,15 +260,21 @@ def generate_invoice_route():
             (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
         )
         conn.commit()
-        print(f"[DEBUG] Invoice successfully created and saved: {filepath}")
     except sqlite3.Error as e:
+        conn.close()
         print(f"[ERROR] Database error while saving invoice: {e}")
         return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
     finally:
         conn.close()
 
-    # Return the generated PDF file
-    return send_file(filepath, as_attachment=True)
+    # Return the generated PDF file if it exists
+    if os.path.exists(filepath):
+        print(f"[DEBUG] Serving the invoice file: {filepath}")
+        return send_file(filepath, as_attachment=True)
+    else:
+        print(f"[ERROR] File not found at path: {filepath}")
+        return jsonify({'error': 'File not found after creation'}), 500
+
 
 
 @app.route('/download_timesheet_db')
