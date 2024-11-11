@@ -145,9 +145,14 @@
         const selectedEmployee = document.getElementById("employeeSelect").value;
         const rows = document.querySelectorAll(".entryRow");
 
+        console.log("Selected Team:", selectedTeam);
+        console.log("Selected Employee:", selectedEmployee);
+
         rows.forEach(row => {
             const rowTeam = row.getAttribute("data-team");
             const rowEmployee = row.getAttribute("data-username");
+
+            console.log("Row Team:", rowTeam, "Row Employee:", rowEmployee);
 
             // Show row if it matches both selected team and employee, or if either filter is empty
             if ((selectedTeam === "" || rowTeam === selectedTeam) && 
