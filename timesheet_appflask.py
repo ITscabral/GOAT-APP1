@@ -171,6 +171,29 @@ def employee_dashboard(username):
         entry_list.append(entry_data)
     return render_template('employee_dashboard.html', username=username, entries=entry_list)
 
+@app.route('/add_employee', methods=['POST'])
+def add_employee():
+    name = request.form.get('name')
+    role = request.form.get('role')
+    phone_number = request.form.get('phone_number')
+    
+    if not all([name, role, phone_number]):
+        return jsonify({'error': 'All fields are required!'}), 400
+
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
+            (name.lower().replace(" ", "_"), '123', role, phone_number)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_dashboard'))
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'User already exists!'}), 400
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
     username = request.form.get('username').lower()
