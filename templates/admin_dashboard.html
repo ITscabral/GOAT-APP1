@@ -149,17 +149,26 @@
             const rowTeam = row.getAttribute("data-team");
             const rowEmployee = row.getAttribute("data-username");
 
-            // Debugging - log row attributes
-            console.log("Row Team:", rowTeam, "| Row Employee:", rowEmployee);
-
-            // Show row only if it matches both selected filters (or if filters are empty)
-            const showRow = 
+            // Show row if it matches the selected team or employee filters
+            const showRow =
                 (selectedTeam === "" || rowTeam === selectedTeam) &&
                 (selectedEmployee === "" || rowEmployee === selectedEmployee);
-                
+
             row.style.display = showRow ? "" : "none";
         });
     }
+
+    // Reset employee selection when changing team, to avoid conflicts in filtering
+    document.getElementById("teamSelect").addEventListener("change", function() {
+        document.getElementById("employeeSelect").value = "";
+        filterEntries();
+    });
+
+    // Reset team selection when changing employee, to avoid conflicts in filtering
+    document.getElementById("employeeSelect").addEventListener("change", function() {
+        document.getElementById("teamSelect").value = "";
+        filterEntries();
+    });
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
