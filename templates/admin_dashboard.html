@@ -149,7 +149,7 @@
             const rowTeam = row.getAttribute("data-team");
             const rowEmployee = row.getAttribute("data-username");
 
-            // Check if row should be visible based on team and employee selection
+            // Show row only if it matches both selected filters (or if filters are empty)
             const showRow = 
                 (selectedTeam === "" || rowTeam === selectedTeam) &&
                 (selectedEmployee === "" || rowEmployee === selectedEmployee);
