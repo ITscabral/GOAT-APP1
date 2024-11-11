@@ -102,10 +102,10 @@ def login():
 def admin_dashboard():
     conn = get_db_connection()
     teams = {
-        "Team 1 - Jackson C & Lucas C": ["Jackson Carneiro", "Lucas Cabral"],
-        "Team 2 - Bruno V & Thallys C": ["Bruno Vianello", "Thallys Carvalho"],
-        "Team 3 - Michel S & Giulliano C": ["Michel Silva", "Giulliano Cabral"],
-        "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
+        "Team 1 - Jackson C & Lucas C": ["jackson_carneiro", "lucas_cabral"],
+        "Team 2 - Bruno V & Thallys C": ["bruno_vianello", "thallys_carvalho"],
+        "Team 3 - Michel S & Giulliano C": ["michel_silva", "giulliano_cabral"],
+        "Team 4 - Pedro C & Caio H": ["pedro_cadenas", "caio_henrique"],
     }
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
@@ -133,7 +133,8 @@ def admin_dashboard():
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
+            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2),
+            'team': next((team for team, members in teams.items() if entry['username'] in members), None)  # Add team information for filtering
         }
         entry_list.append(entry_data)
 
@@ -297,8 +298,6 @@ def generate_invoice_route():
     else:
         print(f"[ERROR] File not found at path: {filepath}")
         return jsonify({'error': 'File not found after creation'}), 500
-
-
 
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
