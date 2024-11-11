@@ -140,6 +140,13 @@
 </div>
 
 <script>
+    const teamMembers = {
+        "Team 1": ["jackson_carneiro", "lucas_cabral"],
+        "Team 2": ["bruno_vianello", "thallys_carvalho"],
+        "Team 3": ["michel_silva", "giulliano_cabral"],
+        "Team 4": ["pedro_cadenas", "caio_henrique"]
+    };
+
     function filterEntries() {
         const selectedTeam = document.getElementById("teamSelect").value;
         const selectedEmployee = document.getElementById("employeeSelect").value.toLowerCase();
@@ -149,22 +156,21 @@
             const rowTeam = row.getAttribute("data-team");
             const rowEmployee = row.getAttribute("data-username");
 
-            // Show row if it matches the selected team or employee filters
+            const isInSelectedTeam = selectedTeam && teamMembers[selectedTeam] && teamMembers[selectedTeam].includes(rowEmployee);
+
             const showRow =
-                (selectedTeam === "" || rowTeam === selectedTeam) &&
+                (selectedTeam === "" || isInSelectedTeam) &&
                 (selectedEmployee === "" || rowEmployee === selectedEmployee);
 
             row.style.display = showRow ? "" : "none";
         });
     }
 
-    // Reset employee selection when changing team, to avoid conflicts in filtering
     document.getElementById("teamSelect").addEventListener("change", function() {
         document.getElementById("employeeSelect").value = "";
         filterEntries();
     });
 
-    // Reset team selection when changing employee, to avoid conflicts in filtering
     document.getElementById("employeeSelect").addEventListener("change", function() {
         document.getElementById("teamSelect").value = "";
         filterEntries();
