@@ -33,7 +33,7 @@
         <div class="row mb-4">
             <div class="col-md-6">
                 <label for="teamSelect">Select Team:</label>
-                <select id="teamSelect" class="form-control" onchange="filterByTeam()">
+                <select id="teamSelect" class="form-control" onchange="filterEntries()">
                     <option value="">All Teams</option>
                     {% for team in teams %}
                     <option value="{{ team }}">{{ team }}</option>
@@ -42,7 +42,7 @@
             </div>
             <div class="col-md-6">
                 <label for="employeeSelect">Select Employee:</label>
-                <select id="employeeSelect" class="form-control" onchange="filterByEmployee()">
+                <select id="employeeSelect" class="form-control" onchange="filterEntries()">
                     <option value="">All Employees</option>
                     {% for employee in employees %}
                     <option value="{{ employee.username }}">{{ employee.username }}</option>
@@ -140,27 +140,21 @@
 </div>
 
 <script>
-    function filterByTeam() {
+    function filterEntries() {
         const selectedTeam = document.getElementById("teamSelect").value;
-        const rows = document.querySelectorAll(".entryRow");
-        rows.forEach(row => {
-            if (selectedTeam === "" || row.getAttribute("data-team") === selectedTeam) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
-        });
-    }
-
-    function filterByEmployee() {
         const selectedEmployee = document.getElementById("employeeSelect").value;
         const rows = document.querySelectorAll(".entryRow");
+
         rows.forEach(row => {
-            if (selectedEmployee === "" || row.getAttribute("data-username") === selectedEmployee) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
+            const rowTeam = row.getAttribute("data-team");
+            const rowEmployee = row.getAttribute("data-username");
+
+            // Determine if the row should be displayed based on the selected filters
+            const showRow = 
+                (selectedTeam === "" || rowTeam === selectedTeam) &&
+                (selectedEmployee === "" || rowEmployee === selectedEmployee);
+
+            row.style.display = showRow ? "" : "none";
         });
     }
 </script>
