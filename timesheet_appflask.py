@@ -102,10 +102,10 @@ def login():
 def admin_dashboard():
     conn = get_db_connection()
     teams = {
-        "Team 1": ["jackson carneiro", "lucas cabral"],
-        "Team 2": ["bruno_vianello", "thallys_carvalho"],
-        "Team 3": ["michel_silva", "giulliano_cabral"],
-        "Team 4": ["pedro_cadenas", "caio_henrique"],
+        "Team 1 - Jackson C & Lucas C": ["Jackson Carneiro", "Lucas Cabral"],
+        "Team 2 - Bruno V & Thallys C": ["Bruno Vianello", "Thallys Carvalho"],
+        "Team 3 - Michel S & Giulliano C": ["Michel Silva", "Giulliano Cabral"],
+        "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
     }
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
