@@ -67,7 +67,7 @@
             </thead>
             <tbody id="timeEntriesTable">
             {% for entry in entries %}
-            <tr class="entryRow" data-username="{{ entry.username }}" data-team="{{ entry.team }}">
+            <tr class="entryRow" data-username="{{ entry.username.strip().lower() }}" data-team="{{ entry.team }}">
                 <td>{{ entry.username }}</td>
                 <td>{{ entry.date }}</td>
                 <td>{{ entry.start_time }}</td>
@@ -95,7 +95,7 @@
             </thead>
             <tbody id="invoicesTable">
             {% for invoice in invoices %}
-            <tr class="invoiceRow" data-username="{{ invoice.username }}">
+            <tr class="invoiceRow" data-username="{{ invoice.username.strip().lower() }}">
                 <td>{{ invoice.invoice_number }}</td>
                 <td>{{ invoice.username }}</td>
                 <td>{{ invoice.date }}</td>
@@ -142,12 +142,15 @@
 <script>
     function filterEntries() {
         const selectedTeam = document.getElementById("teamSelect").value;
-        const selectedEmployee = document.getElementById("employeeSelect").value;
+        const selectedEmployee = document.getElementById("employeeSelect").value.toLowerCase();
         const rows = document.querySelectorAll(".entryRow");
 
         rows.forEach(row => {
             const rowTeam = row.getAttribute("data-team");
             const rowEmployee = row.getAttribute("data-username");
+
+            // Debugging - log row attributes
+            console.log("Row Team:", rowTeam, "| Row Employee:", rowEmployee);
 
             // Show row only if it matches both selected filters (or if filters are empty)
             const showRow = 
