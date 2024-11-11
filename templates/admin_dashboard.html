@@ -140,6 +140,7 @@
 </div>
 
 <script>
+    // Mapping teams and their members
     const teamMembers = {
         "Team 1": ["jackson_carneiro", "lucas_cabral"],
         "Team 2": ["bruno_vianello", "thallys_carvalho"],
@@ -156,11 +157,11 @@
             const rowTeam = row.getAttribute("data-team");
             const rowEmployee = row.getAttribute("data-username");
 
-            const isInSelectedTeam = selectedTeam && teamMembers[selectedTeam] && teamMembers[selectedTeam].includes(rowEmployee);
-
-            const showRow =
-                (selectedTeam === "" || isInSelectedTeam) &&
-                (selectedEmployee === "" || rowEmployee === selectedEmployee);
+            // Check if row should be shown
+            const showRow = (
+                (selectedTeam === "" || rowTeam === selectedTeam || (teamMembers[selectedTeam] && teamMembers[selectedTeam].includes(rowEmployee))) &&
+                (selectedEmployee === "" || rowEmployee === selectedEmployee)
+            );
 
             row.style.display = showRow ? "" : "none";
         });
