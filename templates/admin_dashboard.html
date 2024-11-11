@@ -149,12 +149,13 @@
             const rowTeam = row.getAttribute("data-team");
             const rowEmployee = row.getAttribute("data-username");
 
-            // Determine if the row should be displayed based on the selected filters
-            const showRow = 
-                (selectedTeam === "" || rowTeam === selectedTeam) &&
-                (selectedEmployee === "" || rowEmployee === selectedEmployee);
-
-            row.style.display = showRow ? "" : "none";
+            // Show row if it matches both selected team and employee, or if either filter is empty
+            if ((selectedTeam === "" || rowTeam === selectedTeam) && 
+                (selectedEmployee === "" || rowEmployee === selectedEmployee)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
         });
     }
 </script>
