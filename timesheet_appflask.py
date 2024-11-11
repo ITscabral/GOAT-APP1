@@ -102,7 +102,7 @@ def login():
 def admin_dashboard():
     conn = get_db_connection()
     teams = {
-        "Team 1": ["jackson_carneiro", "lucas_cabral"],
+        "Team 1": ["jackson carneiro", "lucas cabral"],
         "Team 2": ["bruno_vianello", "thallys_carvalho"],
         "Team 3": ["michel_silva", "giulliano_cabral"],
         "Team 4": ["pedro_cadenas", "caio_henrique"],
