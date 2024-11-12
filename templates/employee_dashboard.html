@@ -184,10 +184,10 @@ document.addEventListener("DOMContentLoaded", function() {
                     
                     row.innerHTML = `
                         <td>${invoice.invoice_number}</td>
-                        <td>${invoice.date}</td>
-                        <td>${invoice.total_hours}</td>
-                        <td>${invoice.total_payment}</td>
-                        <td><a href="${invoice.filename}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
+                         <td>${invoice.date}</td>
+                         <td>${invoice.total_hours}</td>
+                         <td>${invoice.total_payment}</td>
+                         <td><a href="/static/invoices/${invoice.filename}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
                     `;
                     
                     invoiceTableBody.appendChild(row);
