@@ -140,12 +140,12 @@
 </div>
 
 <script>
-    // Mapping teams and their members
+    // Mapping teams and their members with formatted names
     const teamMembers = {
-        "Team 1 - Jackson C & Lucas C": ["jackson_carneiro", "lucas_cabral"],
-        "Team 2 - Bruno V & Thallys C": ["bruno_vianello", "thallys_carvalho"],
-        "Team 3 - Michel S & Giulliano C": ["michel_silva", "giulliano_cabral"],
-        "Team 4 - Pedro C & Caio H": ["pedro_cadenas", "caio_henrique"]
+        "Team 1 - Jackson C & Lucas C": ["Jackson Carneiro", "Lucas Cabral"],
+        "Team 2 - Bruno V & Thallys C": ["Bruno Vianello", "Thallys Carvalho"],
+        "Team 3 - Michel S & Giulliano C": ["Michel Silva", "Giulliano Cabral"],
+        "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"]
     };
 
     function filterEntries() {
@@ -157,6 +157,7 @@
             const rowEmployee = row.getAttribute("data-username");
             const employeeInTeam = selectedTeam && teamMembers[selectedTeam] && teamMembers[selectedTeam].includes(rowEmployee);
 
+            // Check if the row should be shown
             const showRow = (
                 (selectedTeam === "" || employeeInTeam) &&
                 (selectedEmployee === "" || rowEmployee === selectedEmployee)
