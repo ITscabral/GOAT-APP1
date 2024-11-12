@@ -269,8 +269,7 @@ def generate_invoice_route():
         "Address": "123 Business St, Sydney, Australia",
         "Phone": "+61 2 1234 5678"
     }
-    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
-
+    filepath = os.path.join("static", "invoices", f"Invoice_{invoice_number}.pdf")
     if filepath is None or not os.path.exists(filepath):
         conn.close()
         print("[ERROR] Invoice file was not created.")
