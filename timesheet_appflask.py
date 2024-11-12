@@ -150,7 +150,6 @@ def admin_dashboard():
         invoice_list.append(invoice_data)
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
-
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
