@@ -297,6 +297,27 @@ def generate_invoice_route():
         print(f"[ERROR] File not found at path: {filepath}")
         return jsonify({'error': 'File not found after creation'}), 500
 
+@app.route('/employee_invoices/<username>', methods=['GET'])
+def employee_invoices(username):
+    conn = get_db_connection()
+    invoices = conn.execute(
+        'SELECT invoice_number, date, total_hours, total_payment, filename FROM invoices WHERE username = ?',
+        (username,)
+    ).fetchall()
+    conn.close()
+    
+    invoice_list = []
+    for invoice in invoices:
+        invoice_list.append({
+            'invoice_number': invoice['invoice_number'],
+            'date': invoice['date'],
+            'total_hours': invoice['total_hours'],
+            'total_payment': invoice['total_payment'],
+            'filename': invoice['filename']
+        })
+    
+    return jsonify(invoice_list), 200
+
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
     try:
