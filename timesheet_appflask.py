@@ -367,5 +367,26 @@ def send_invoice_to_db():
 
     return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
 
+@app.route('/employee_invoices/<username>', methods=['GET'])
+def employee_invoices(username):
+    conn = get_db_connection()
+    invoices = conn.execute(
+        'SELECT invoice_number, date, total_hours, total_payment, filename FROM invoices WHERE username = ?',
+        (username,)
+    ).fetchall()
+    conn.close()
+    
+    invoice_list = []
+    for invoice in invoices:
+        invoice_list.append({
+            'invoice_number': invoice['invoice_number'],
+            'date': invoice['date'],
+            'total_hours': invoice['total_hours'],
+            'total_payment': invoice['total_payment'],
+            'filename': invoice['filename']
+        })
+    
+    return jsonify(invoice_list), 200
+    
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
