@@ -51,20 +51,6 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.route('/test_db')
-def test_db():
-    conn = get_db_connection()
-    try:
-        users = conn.execute("SELECT * FROM users").fetchall()
-        conn.close()
-        if users:
-            return jsonify({'message': "User data retrieved successfully", 'data': [dict(user) for user in users]})
-        else:
-            return jsonify({'message': "No user data found in the database"})
-    except Exception as e:
-        conn.close()
-        return jsonify({'error': f"Database test failed: {str(e)}"}), 500
-
 @app.route('/')
 def home():
     return render_template('index.html')
@@ -74,7 +60,7 @@ def login():
     try:
         username = request.form.get('username').strip().lower().replace(" ", "")
         password = request.form.get('password')
-        
+
         if not username or not password:
             return jsonify({'message': 'Username and password are required'}), 400
 
@@ -94,8 +80,6 @@ def login():
 
     except sqlite3.Error as e:
         return jsonify({'error': f"Database error during login: {e}"}), 500
-    except Exception as e:
-        return jsonify({'error': f"Unexpected error during login: {e}"}), 500
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -159,7 +143,7 @@ def employee_dashboard(username):
         (username.lower().replace(" ", ""),)
     ).fetchall()
     conn.close()
-    
+
     entry_list = []
     for entry in entries:
         entry_data = {
@@ -176,7 +160,7 @@ def add_employee():
     name = request.form.get('name')
     role = request.form.get('role')
     phone_number = request.form.get('phone_number')
-    
+
     if not all([name, role, phone_number]):
         return jsonify({'error': 'All fields are required!'}), 400
 
@@ -191,8 +175,6 @@ def add_employee():
         return redirect(url_for('admin_dashboard'))
     except sqlite3.IntegrityError:
         return jsonify({'error': 'User already exists!'}), 400
-    except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
@@ -226,21 +208,23 @@ def delete_time_entry():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
-        # Attempt to delete the entry
+
         cursor.execute('''
             DELETE FROM time_entries 
             WHERE username = ? AND date = ? AND start_time = ? AND end_time = ?
         ''', (username, date, start_time, end_time))
-        
-        conn.commit()
-        message = "Entry deleted successfully." if cursor.rowcount > 0 else "No matching entry found to delete."
-        
+
+        if cursor.rowcount == 0:
+            message = "No matching entry found to delete."
+        else:
+            conn.commit()
+            message = "Entry deleted successfully."
+
         conn.close()
-        return jsonify({'message': message})
-    
+        return render_template('delete_entry_form.html', message=message)
+
     except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
+        return render_template('delete_entry_form.html', message=f"Error: {e}")
 
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
@@ -287,7 +271,6 @@ def generate_invoice_route():
 
     if filepath is None or not os.path.exists(filepath):
         conn.close()
-        print("[ERROR] Invoice file was not created.")
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
     try:
@@ -296,18 +279,12 @@ def generate_invoice_route():
             (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
         )
         conn.commit()
-    except sqlite3.Error as e:
-        conn.close()
-        print(f"[ERROR] Database error while saving invoice: {e}")
-        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
     finally:
         conn.close()
 
     if os.path.exists(filepath):
-        print(f"[DEBUG] Serving the invoice file: {filepath}")
         return send_file(filepath, as_attachment=True)
     else:
-        print(f"[ERROR] File not found at path: {filepath}")
         return jsonify({'error': 'File not found after creation'}), 500
 
 @app.route('/download_timesheet_db')
