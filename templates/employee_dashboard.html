@@ -97,11 +97,11 @@
             <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
         </form>
         <!-- Send Invoice Form -->
-        <form id="sendInvoiceForm" action="{{ url_for('send_invoice') }}" method="POST">
+        <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
             <input type="hidden" name="invoice_number" id="invoiceNumber">
-            <button type="button" id="sendInvoiceButton" class="btn btn-secondary" disabled>Send Invoice</button>
-        </form>
+            <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
+</form>
     </div>
 </div>
 
