@@ -70,8 +70,8 @@
             {% for entry in entries %}
             <tr>
                 <td>{{ entry['date'] }}</td>
-                <td>{{ entry['start_time'] }}</td>
-                <td>{{ entry['end_time'] }}</td>
+                <td class="time-display">{{ entry['start_time'] }}</td>
+                <td class="time-display">{{ entry['end_time'] }}</td>
                 <td>{{ entry['total_hours'] }}</td>
                 <td>
                     <form action="{{ url_for('delete_time_entry') }}" method="POST" style="display:inline;">
@@ -106,6 +106,21 @@
 </div>
 
 <script>
+    // Function to convert 24-hour time format to 12-hour format with AM/PM
+    function formatTimeTo12Hour(time24) {
+        const [hours, minutes] = time24.split(':');
+        const amPm = +hours >= 12 ? 'PM' : 'AM';
+        const hours12 = ((+hours + 11) % 12 + 1); // Convert 24-hour to 12-hour
+        return `${hours12}:${minutes} ${amPm}`;
+    }
+
+    // Apply the 12-hour format to each time display
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll('.time-display').forEach(function(td) {
+            td.textContent = formatTimeTo12Hour(td.textContent);
+        });
+    });
+
     document.getElementById("generateInvoiceForm").onsubmit = function(event) {
         fetch(this.action, {
             method: 'POST',
@@ -122,7 +137,7 @@
             const a = document.createElement('a');
             a.style.display = 'none';
             a.href = url;
-            a.download = `Invoice_${new Date().toISOString()}.pdf`;  // Dynamic filename
+            a.download = `Invoice_${new Date().toISOString()}.pdf`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
