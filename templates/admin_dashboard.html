@@ -45,7 +45,7 @@
                 <select id="employeeSelect" class="form-control" onchange="filterEntries()">
                     <option value="">All Employees</option>
                     {% for employee in employees %}
-                    <option value="{{ employee.username }}">{{ employee.username }}</option>
+                    <option value="{{ employee.username | title }}">{{ employee.username | title }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -68,7 +68,7 @@
             <tbody id="timeEntriesTable">
             {% for entry in entries %}
             <tr class="entryRow" data-username="{{ entry.username | lower | replace(' ', '') }}" data-team="{{ entry.team }}">
-                <td>{{ entry.username }}</td>
+                <td>{{ entry.username | title }}</td>
                 <td>{{ entry.date }}</td>
                 <td>{{ entry.start_time }}</td>
                 <td>{{ entry.end_time }}</td>
@@ -97,7 +97,7 @@
             {% for invoice in invoices %}
             <tr class="invoiceRow" data-username="{{ invoice.username | lower | replace(' ', '') }}">
                 <td>{{ invoice.invoice_number }}</td>
-                <td>{{ invoice.username }}</td>
+                <td>{{ invoice.username | title }}</td>
                 <td>{{ invoice.date }}</td>
                 <td>{{ invoice.total_hours }}</td>
                 <td>{{ invoice.total_payment }}</td>
