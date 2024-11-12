@@ -330,6 +330,7 @@ def send_invoice_to_db():
     total_hours = sum(entry[3] for entry in timesheet_data)
     invoice_date = datetime.now().strftime("%Y-%m-%d")
 
+    # Check for duplicate based on username, date, and total hours
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
         (username, invoice_date, total_hours)
@@ -337,9 +338,9 @@ def send_invoice_to_db():
 
     if existing_invoice:
         conn.close()
-        return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
+        return jsonify({'error': 'An identical invoice already exists for this date and total hours. You may want to modify the time entries or use the existing invoice.'}), 400
 
-    # If no duplicate is found, proceed to create a new invoice
+    # Proceed with creating a new invoice if no duplicate is found
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
 
     company_info = {
@@ -366,7 +367,7 @@ def send_invoice_to_db():
         conn.close()
 
     return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
-
+    
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
     conn = get_db_connection()
