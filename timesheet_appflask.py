@@ -103,20 +103,31 @@ def admin_dashboard():
     employee_list = []
     for team_name, team_members in teams.items():
         for member in team_members:
+            # Match usernames with case-insensitivity and format for display
             employee_data = next((emp for emp in employees if emp['username'].strip().title() == member), None)
             if employee_data:
-                employee_list.append({'username': member, 'team': team_name, 'role': employee_data['role']})
+                employee_list.append({
+                    'username': member,  # Already formatted for display
+                    'team': team_name,
+                    'role': employee_data['role']
+                })
             else:
-                employee_list.append({'username': member, 'team': team_name, 'role': None})
+                employee_list.append({
+                    'username': member,
+                    'team': team_name,
+                    'role': None
+                })
 
     entry_list = []
     for entry in entries:
         entry_data = {
-            'username': entry['username'].strip().title(),
+            'username': entry['username'].strip().title(),  # Format username for display
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
-            'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2),
+            'total_hours': round(
+                (datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2
+            ),
             'team': next((team for team, members in teams.items() if entry['username'].strip().title() in members), None)
         }
         entry_list.append(entry_data)
@@ -125,7 +136,7 @@ def admin_dashboard():
     for invoice in invoices:
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': invoice['employee_name'].strip().title(),
+            'username': invoice['employee_name'].strip().title(),  # Format for display
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
