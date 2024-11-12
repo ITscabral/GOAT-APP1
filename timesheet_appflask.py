@@ -305,11 +305,79 @@ def download_timesheet_db():
     except Exception as e:
         return jsonify({'error': f"Could not find or download the file: {str(e)}"}), 500
 
-@app.route('/send_invoice', methods=['POST'])
-def send_invoice():
+@app.route('/send_invoice_to_db', methods=['POST'])
+def send_invoice_to_db():
     username = request.form.get('username')
     invoice_number = request.form.get('invoice_number')
-    return jsonify({'message': f'Invoice {invoice_number} sent successfully to {username}'})
+
+    if not username:
+        return jsonify({'error': 'Username is required'}), 400
+
+    # Generate or retrieve the invoice file for this user
+    conn = get_db_connection()
+    entries = conn.execute(
+        'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
+        (username,)
+    ).fetchall()
+
+    if not entries:
+        conn.close()
+        return jsonify({'error': 'No time entries found for this user'}), 400
+
+    # Prepare timesheet data and calculate total hours
+    timesheet_data = [
+        (entry['date'], entry['start_time'], entry['end_time'],
+         round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+        for entry in entries
+    ]
+    total_hours = sum(entry[3] for entry in timesheet_data)
+
+    # Get today's date for invoice date
+    invoice_date = datetime.now().strftime("%Y-%m-%d")
+
+    # Check for duplicate invoice by looking for an identical date, username, and total_hours
+    existing_invoice = conn.execute(
+        'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
+        (username, invoice_date, total_hours)
+    ).fetchone()
+
+    if existing_invoice:
+        conn.close()
+        return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
+
+    # If no duplicate is found, proceed to create a new invoice
+    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
+
+    # Company details
+    company_info = {
+        "Company Name": "GOAT Removals",
+        "Address": "123 Business St, Sydney, Australia",
+        "Phone": "+61 2 1234 5678"
+    }
+
+    # Generate the invoice PDF
+    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
+
+    # Verify that the PDF was successfully created
+    if filepath is None or not os.path.exists(filepath):
+        conn.close()
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
+    # Save the invoice to the database
+    try:
+        conn.execute(
+            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.close()
+        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+    # Confirm the invoice is sent to the database
+    return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
