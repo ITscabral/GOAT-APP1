@@ -150,6 +150,7 @@ def admin_dashboard():
         invoice_list.append(invoice_data)
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
+
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
@@ -207,6 +208,25 @@ def add_time_entry():
         conn = get_db_connection()
         conn.execute(
             'INSERT INTO time_entries (username, date, start_time, end_time) VALUES (?, ?, ?, ?)',
+            (username, date, start_time, end_time)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for('employee_dashboard', username=username))
+    except sqlite3.Error as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/delete_time_entry', methods=['POST'])
+def delete_time_entry():
+    username = request.form.get('username').strip().lower().replace(" ", "")
+    date = request.form.get('date')
+    start_time = request.form.get('start_time')
+    end_time = request.form.get('end_time')
+
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'DELETE FROM time_entries WHERE username = ? AND date = ? AND start_time = ? AND end_time = ?',
             (username, date, start_time, end_time)
         )
         conn.commit()
