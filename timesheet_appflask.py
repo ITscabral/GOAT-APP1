@@ -245,6 +245,7 @@ def delete_entry_form():
         
         except sqlite3.Error as e:
             conn.close()
+            # Render the error message if database interaction fails
             return render_template('delete_entry_form.html', message=f"Error: {e}")
 
     return render_template('delete_entry_form.html', message="")
