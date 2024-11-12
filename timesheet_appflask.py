@@ -221,11 +221,11 @@ def delete_time_entry():
             message = "Entry deleted successfully."
 
         conn.close()
-        return render_template('delete_entry_form.html', message=message)
+        return jsonify({'message': message}), 200
 
     except sqlite3.Error as e:
-        return render_template('delete_entry_form.html', message=f"Error: {e}")
-
+        return jsonify({'error': f"Error during deletion: {e}"}), 500
+        
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username')
