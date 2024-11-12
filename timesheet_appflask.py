@@ -93,13 +93,17 @@ def admin_dashboard():
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
+
+    # Explicitly query for all invoices and ensure they are linked correctly with users
     invoices = conn.execute('''
         SELECT invoices.*, users.username as employee_name
         FROM invoices
         JOIN users ON invoices.username = users.username
     ''').fetchall()
+
     conn.close()
 
+    # Process employee list by team
     employee_list = []
     for team_name, team_members in teams.items():
         for member in team_members:
@@ -107,7 +111,7 @@ def admin_dashboard():
             employee_data = next((emp for emp in employees if emp['username'].strip().title() == member), None)
             if employee_data:
                 employee_list.append({
-                    'username': member,  # Already formatted for display
+                    'username': member,
                     'team': team_name,
                     'role': employee_data['role']
                 })
@@ -118,10 +122,11 @@ def admin_dashboard():
                     'role': None
                 })
 
+    # Process time entry list
     entry_list = []
     for entry in entries:
         entry_data = {
-            'username': ' '.join(entry['username'].strip().title().split()),  # Ensuring proper formatting
+            'username': ' '.join(entry['username'].strip().title().split()),
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
@@ -132,11 +137,12 @@ def admin_dashboard():
         }
         entry_list.append(entry_data)
 
+    # Process invoice list
     invoice_list = []
     for invoice in invoices:
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': ' '.join(invoice['employee_name'].strip().title().split()),  # Ensuring proper formatting
+            'username': ' '.join(invoice['employee_name'].strip().title().split()),
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
@@ -145,6 +151,7 @@ def admin_dashboard():
         invoice_list.append(invoice_data)
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
+
 
 
 @app.route('/employee_dashboard/<username>')
