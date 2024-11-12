@@ -83,56 +83,77 @@ def login():
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
-    conn = get_db_connection()
-    teams = {
-        "Team 1 - Jackson C & Lucas C": ["Jackson Carneiro", "Lucas Cabral"],
-        "Team 2 - Bruno V & Thallys C": ["Bruno Vianello", "Thallys Carvalho"],
-        "Team 3 - Michel S & Giulliano C": ["Michel Silva", "Giulliano Cabral"],
-        "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
-    }
+    try:
+        conn = get_db_connection()
+        print("Database connection established")  # Debug print
 
-    employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
-    entries = conn.execute('SELECT * FROM time_entries').fetchall()
-    invoices = conn.execute('SELECT * FROM invoices').fetchall()
-    conn.close()
-
-    employee_list = []
-    for team_name, team_members in teams.items():
-        for member in team_members:
-            employee_data = next((emp for emp in employees if emp['username'].strip().title() == member), None)
-            employee_list.append({
-                'username': member,
-                'team': team_name,
-                'role': employee_data['role'] if employee_data else None
-            })
-
-    entry_list = []
-    for entry in entries:
-        entry_data = {
-            'username': ' '.join(entry['username'].strip().title().split()),
-            'date': entry['date'],
-            'start_time': entry['start_time'],
-            'end_time': entry['end_time'],
-            'total_hours': round(
-                (datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2
-            ),
-            'team': next((team for team, members in teams.items() if entry['username'].strip().title() in members), None)
+        teams = {
+            "Team 1 - Jackson C & Lucas C": ["Jackson Carneiro", "Lucas Cabral"],
+            "Team 2 - Bruno V & Thallys C": ["Bruno Vianello", "Thallys Carvalho"],
+            "Team 3 - Michel S & Giulliano C": ["Michel Silva", "Giulliano Cabral"],
+            "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
         }
-        entry_list.append(entry_data)
 
-    invoice_list = []
-    for invoice in invoices:
-        invoice_data = {
-            'invoice_number': invoice['invoice_number'],
-            'username': ' '.join(invoice['username'].strip().title().split()),
-            'date': invoice['date'],
-            'total_hours': invoice['total_hours'],
-            'total_payment': invoice['total_payment'],
-            'filename': invoice['filename']
-        }
-        invoice_list.append(invoice_data)
+        # Fetch data
+        employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
+        print("Employees fetched:", employees)  # Debug print
 
-    return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
+        entries = conn.execute('SELECT * FROM time_entries').fetchall()
+        print("Time entries fetched:", entries)  # Debug print
+
+        invoices = conn.execute('SELECT * FROM invoices').fetchall()
+        print("Invoices fetched:", invoices)  # Debug print
+
+        conn.close()
+
+        # Process employee list by team
+        employee_list = []
+        for team_name, team_members in teams.items():
+            for member in team_members:
+                employee_data = next((emp for emp in employees if emp['username'].strip().title() == member), None)
+                employee_list.append({
+                    'username': member,
+                    'team': team_name,
+                    'role': employee_data['role'] if employee_data else None
+                })
+
+        # Process entries
+        entry_list = []
+        for entry in entries:
+            entry_data = {
+                'username': ' '.join(entry['username'].strip().title().split()),
+                'date': entry['date'],
+                'start_time': entry['start_time'],
+                'end_time': entry['end_time'],
+                'total_hours': round(
+                    (datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2
+                ),
+                'team': next((team for team, members in teams.items() if entry['username'].strip().title() in members), None)
+            }
+            entry_list.append(entry_data)
+
+        # Process invoices
+        invoice_list = []
+        for invoice in invoices:
+            invoice_data = {
+                'invoice_number': invoice['invoice_number'],
+                'username': ' '.join(invoice['username'].strip().title().split()),
+                'date': invoice['date'],
+                'total_hours': invoice['total_hours'],
+                'total_payment': invoice['total_payment'],
+                'filename': invoice['filename']
+            }
+            invoice_list.append(invoice_data)
+
+        return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
+
+    except sqlite3.Error as e:
+        print(f"SQLite error in admin_dashboard: {e}")  # Debug print for database errors
+        return "Database error occurred", 500
+
+    except Exception as e:
+        print(f"General error in admin_dashboard: {e}")  # Debug print for any other errors
+        return "An unexpected error occurred", 500
 
 
 @app.route('/employee_dashboard/<username>')
