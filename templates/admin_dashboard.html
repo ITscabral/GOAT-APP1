@@ -67,7 +67,7 @@
             </thead>
             <tbody id="timeEntriesTable">
             {% for entry in entries %}
-            <tr class="entryRow" data-username="{{ entry.username|lower|replace(' ', '_') }}" data-team="{{ entry.team }}">
+            <tr class="entryRow" data-username="{{ entry.username }}" data-team="{{ entry.team }}">
                 <td>{{ entry.username }}</td>
                 <td>{{ entry.date }}</td>
                 <td>{{ entry.start_time }}</td>
@@ -95,7 +95,7 @@
             </thead>
             <tbody id="invoicesTable">
             {% for invoice in invoices %}
-            <tr class="invoiceRow" data-username="{{ invoice.username|lower|replace(' ', '_') }}">
+            <tr class="invoiceRow" data-username="{{ invoice.username }}">
                 <td>{{ invoice.invoice_number }}</td>
                 <td>{{ invoice.username }}</td>
                 <td>{{ invoice.date }}</td>
@@ -140,7 +140,7 @@
 </div>
 
 <script>
-    // Mapping teams and their members with formatted names
+    // Define team members for filtering with exact names
     const teamMembers = {
         "Team 1 - Jackson C & Lucas C": ["Jackson Carneiro", "Lucas Cabral"],
         "Team 2 - Bruno V & Thallys C": ["Bruno Vianello", "Thallys Carvalho"],
@@ -157,10 +157,10 @@
             const rowEmployee = row.getAttribute("data-username");
             const employeeInTeam = selectedTeam && teamMembers[selectedTeam] && teamMembers[selectedTeam].includes(rowEmployee);
 
-            // Check if the row should be shown
+            // Show row if selected team or employee matches
             const showRow = (
                 (selectedTeam === "" || employeeInTeam) &&
-                (selectedEmployee === "" || rowEmployee === selectedEmployee)
+                (selectedEmployee === "" || rowEmployee.toLowerCase() === selectedEmployee)
             );
 
             row.style.display = showRow ? "" : "none";
