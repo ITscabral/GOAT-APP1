@@ -167,7 +167,37 @@
         event.preventDefault(); // Prevents form from submitting normally
     };
 </script>
+document.addEventListener("DOMContentLoaded", function() {
+    fetchInvoices();
 
+    // Load invoices and display them
+    function fetchInvoices() {
+        fetch(`/employee_invoices/{{ username }}`)
+            .then(response => response.json())
+            .then(invoices => {
+                const invoiceTableBody = document.getElementById('invoiceTableBody');
+                invoiceTableBody.innerHTML = '';  // Clear previous rows
+
+                invoices.forEach(invoice => {
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td>${invoice.invoice_number}</td>
+                        <td>${invoice.date}</td>
+                        <td>${invoice.total_hours}</td>
+                        <td>${invoice.total_payment}</td>
+                        <td><a href="${invoice.filename}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
+                    `;
+                    
+                    invoiceTableBody.appendChild(row);
+                });
+            })
+            .catch(error => {
+                console.error('Error loading invoices:', error);
+                alert("Error loading invoices.");
+            });
+    }
+});
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
