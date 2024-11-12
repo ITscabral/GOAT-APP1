@@ -221,11 +221,11 @@ def delete_time_entry():
             message = "Entry deleted successfully."
 
         conn.close()
-        return jsonify({'message': message}), 200
+        return render_template('delete_entry_form.html', message=message)
 
     except sqlite3.Error as e:
-        return jsonify({'error': f"Error during deletion: {e}"}), 500
-        
+        return render_template('delete_entry_form.html', message=f"Error: {e}")
+
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username')
@@ -269,7 +269,8 @@ def generate_invoice_route():
         "Address": "123 Business St, Sydney, Australia",
         "Phone": "+61 2 1234 5678"
     }
-    filepath = os.path.join("static", "invoices", f"Invoice_{invoice_number}.pdf")
+    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
+
     if filepath is None or not os.path.exists(filepath):
         conn.close()
         print("[ERROR] Invoice file was not created.")
@@ -329,7 +330,6 @@ def send_invoice_to_db():
     total_hours = sum(entry[3] for entry in timesheet_data)
     invoice_date = datetime.now().strftime("%Y-%m-%d")
 
-    # Check for duplicate based on username, date, and total hours
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
         (username, invoice_date, total_hours)
@@ -337,9 +337,9 @@ def send_invoice_to_db():
 
     if existing_invoice:
         conn.close()
-        return jsonify({'error': 'An identical invoice already exists for this date and total hours. You may want to modify the time entries or use the existing invoice.'}), 400
+        return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
 
-    # Create a new invoice if no duplicate is found
+    # If no duplicate is found, proceed to create a new invoice
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
 
     company_info = {
@@ -347,18 +347,12 @@ def send_invoice_to_db():
         "Address": "123 Business St, Sydney, Australia",
         "Phone": "+61 2 1234 5678"
     }
-    filepath = os.path.join("static", "invoices", f"Invoice_{invoice_number}.pdf")
-    os.makedirs(os.path.dirname(filepath), exist_ok=True)  # Ensure the directory exists
+    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
 
-    # Generate the invoice PDF
-    generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
-
-    # Check if the file was generated successfully
-    if not os.path.exists(filepath):
+    if filepath is None or not os.path.exists(filepath):
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Save the invoice details to the database
     try:
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
@@ -371,28 +365,7 @@ def send_invoice_to_db():
     finally:
         conn.close()
 
-    return jsonify({'message': f'Invoice {invoice_number} saved successfully.'})
- 
-@app.route('/employee_invoices/<username>', methods=['GET'])
-def employee_invoices(username):
-    conn = get_db_connection()
-    invoices = conn.execute(
-        'SELECT invoice_number, date, total_hours, total_payment, filename FROM invoices WHERE username = ?',
-        (username,)
-    ).fetchall()
-    conn.close()
-    
-    invoice_list = []
-    for invoice in invoices:
-        invoice_list.append({
-            'invoice_number': invoice['invoice_number'],
-            'date': invoice['date'],
-            'total_hours': invoice['total_hours'],
-            'total_payment': invoice['total_payment'],
-            'filename': invoice['filename']
-        })
-    
-    return jsonify(invoice_list), 200
-    
+    return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
