@@ -216,33 +216,38 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/delete_time_entry', methods=['POST'])
-def delete_time_entry():
-    username = request.form.get('username').strip().lower().replace(" ", "")
-    date = request.form.get('date')
-    start_time = request.form.get('start_time')
-    end_time = request.form.get('end_time')
+@app.route('/delete_entry_form', methods=['GET', 'POST'])
+def delete_entry_form():
+    if request.method == 'POST':
+        username = request.form.get('username').strip().lower().replace(" ", "_")
+        date = request.form.get('date')
+        start_time = request.form.get('start_time')
+        end_time = request.form.get('end_time')
 
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Attempt to delete the entry
-        cursor.execute(
-            'DELETE FROM time_entries WHERE username = ? AND date = ? AND start_time = ? AND end_time = ?',
-            (username, date, start_time, end_time)
-        )
-        conn.commit()
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Attempt to delete the entry
+            cursor.execute('''
+                DELETE FROM time_entries 
+                WHERE username = ? AND date = ? AND start_time = ? AND end_time = ?
+            ''', (username, date, start_time, end_time))
+            
+            if cursor.rowcount == 0:
+                message = "No matching entry found to delete."
+            else:
+                conn.commit()
+                message = "Entry deleted successfully."
+            
+            conn.close()
+            return render_template('delete_entry_form.html', message=message)
         
-        # Check if the deletion was successful
-        if cursor.rowcount == 0:
+        except sqlite3.Error as e:
             conn.close()
-            return jsonify({'error': 'No matching entry found to delete.'}), 404
-        else:
-            conn.close()
-            return jsonify({'message': 'Time entry deleted successfully.'}), 200
-    except sqlite3.Error as e:
-        return jsonify({'error': str(e)}), 500
+            return render_template('delete_entry_form.html', message=f"Error: {e}")
+
+    return render_template('delete_entry_form.html', message="")
 
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
