@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+1- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -99,35 +99,9 @@
         <!-- Send Invoice Form -->
         <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
+            <input type="hidden" name="invoice_number" id="invoiceNumber">
             <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
-        </form>
-    </div>
-
-    <!-- Previous Invoices Section -->
-    <div id="previousInvoicesSection" class="mt-5">
-        <h3>Previous Invoices</h3>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Invoice #</th>
-                    <th>Date</th>
-                    <th>Total Hours</th>
-                    <th>Total Payment</th>
-                    <th>View</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for invoice in invoices %}
-                <tr>
-                    <td>{{ invoice.invoice_number }}</td>
-                    <td>{{ invoice.date }}</td>
-                    <td>{{ invoice.total_hours }}</td>
-                    <td>{{ invoice.total_payment }}</td>
-                    <td><a href="{{ url_for('open_invoice', filename=invoice.filename) }}" class="btn btn-primary" target="_blank">View</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+</form>
     </div>
 </div>
 
@@ -180,3 +154,4 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
+ Let’s start with number one first
