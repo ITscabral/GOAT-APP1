@@ -225,13 +225,22 @@ def delete_time_entry():
 
     try:
         conn = get_db_connection()
-        conn.execute(
+        cursor = conn.cursor()
+
+        # Attempt to delete the entry
+        cursor.execute(
             'DELETE FROM time_entries WHERE username = ? AND date = ? AND start_time = ? AND end_time = ?',
             (username, date, start_time, end_time)
         )
         conn.commit()
-        conn.close()
-        return redirect(url_for('employee_dashboard', username=username))
+        
+        # Check if the deletion was successful
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'No matching entry found to delete.'}), 404
+        else:
+            conn.close()
+            return jsonify({'message': 'Time entry deleted successfully.'}), 200
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
