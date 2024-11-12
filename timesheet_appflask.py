@@ -339,7 +339,7 @@ def send_invoice_to_db():
         conn.close()
         return jsonify({'error': 'An identical invoice already exists for this date and total hours. You may want to modify the time entries or use the existing invoice.'}), 400
 
-    # Proceed with creating a new invoice if no duplicate is found
+    # Create a new invoice if no duplicate is found
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
 
     company_info = {
@@ -347,6 +347,31 @@ def send_invoice_to_db():
         "Address": "123 Business St, Sydney, Australia",
         "Phone": "+61 2 1234 5678"
     }
+    filepath = os.path.join("static", "invoices", f"Invoice_{invoice_number}.pdf")
+    os.makedirs(os.path.dirname(filepath), exist_ok=True)  # Ensure the directory exists
+
+    # Generate the invoice PDF
+    generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
+
+    # Check if the file was generated successfully
+    if not os.path.exists(filepath):
+        conn.close()
+        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
+
+    # Save the invoice details to the database
+    try:
+        conn.execute(
+            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        conn.close()
+        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
+    finally:
+        conn.close()
+
+    return jsonify({'message': f'Invoice {invoice_number} saved successfully.'})
  
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
