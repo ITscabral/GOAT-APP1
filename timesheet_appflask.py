@@ -121,7 +121,7 @@ def admin_dashboard():
     entry_list = []
     for entry in entries:
         entry_data = {
-            'username': entry['username'].strip().title(),  # Format username for display
+            'username': ' '.join(entry['username'].strip().title().split()),  # Ensuring proper formatting
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
@@ -136,7 +136,7 @@ def admin_dashboard():
     for invoice in invoices:
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': invoice['employee_name'].strip().title(),  # Format for display
+            'username': ' '.join(invoice['employee_name'].strip().title().split()),  # Ensuring proper formatting
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
@@ -145,6 +145,7 @@ def admin_dashboard():
         invoice_list.append(invoice_data)
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
+
 
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
