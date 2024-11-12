@@ -91,40 +91,21 @@ def admin_dashboard():
         "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
     }
 
-    # Fetch employees, time entries, and invoices
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
-
-    # Fetch invoices and print to confirm retrieval
-    invoices = conn.execute('''
-        SELECT invoices.*, users.username as employee_name
-        FROM invoices
-        JOIN users ON invoices.username = users.username
-    ''').fetchall()
-
-    print("Invoices Retrieved from Database:", invoices)  # Debug print
-
+    invoices = conn.execute('SELECT * FROM invoices').fetchall()
     conn.close()
 
-    # Prepare employee list by team
     employee_list = []
     for team_name, team_members in teams.items():
         for member in team_members:
             employee_data = next((emp for emp in employees if emp['username'].strip().title() == member), None)
-            if employee_data:
-                employee_list.append({
-                    'username': member,
-                    'team': team_name,
-                    'role': employee_data['role']
-                })
-            else:
-                employee_list.append({
-                    'username': member,
-                    'team': team_name,
-                    'role': None
-                })
+            employee_list.append({
+                'username': member,
+                'team': team_name,
+                'role': employee_data['role'] if employee_data else None
+            })
 
-    # Prepare time entry list
     entry_list = []
     for entry in entries:
         entry_data = {
@@ -139,12 +120,11 @@ def admin_dashboard():
         }
         entry_list.append(entry_data)
 
-    # Prepare invoice list and ensure format
     invoice_list = []
     for invoice in invoices:
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': ' '.join(invoice['employee_name'].strip().title().split()),
+            'username': ' '.join(invoice['username'].strip().title().split()),
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
@@ -152,9 +132,6 @@ def admin_dashboard():
         }
         invoice_list.append(invoice_data)
 
-    print("Final Invoice List Sent to Template:", invoice_list)  # Debug print
-
-    # Render template
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
 
 
@@ -330,12 +307,10 @@ def download_timesheet_db():
 @app.route('/send_invoice_to_db', methods=['POST'])
 def send_invoice_to_db():
     username = request.form.get('username')
-    invoice_number = request.form.get('invoice_number')
 
     if not username:
         return jsonify({'error': 'Username is required'}), 400
 
-    # Generate or retrieve the invoice file for this user
     conn = get_db_connection()
     entries = conn.execute(
         'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
@@ -353,11 +328,8 @@ def send_invoice_to_db():
         for entry in entries
     ]
     total_hours = sum(entry[3] for entry in timesheet_data)
-
-    # Get today's date for invoice date
     invoice_date = datetime.now().strftime("%Y-%m-%d")
 
-    # Check for duplicate invoice by looking for an identical date, username, and total_hours
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
         (username, invoice_date, total_hours)
@@ -370,22 +342,17 @@ def send_invoice_to_db():
     # If no duplicate is found, proceed to create a new invoice
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
 
-    # Company details
     company_info = {
         "Company Name": "GOAT Removals",
         "Address": "123 Business St, Sydney, Australia",
         "Phone": "+61 2 1234 5678"
     }
-
-    # Generate the invoice PDF
     filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
 
-    # Verify that the PDF was successfully created
     if filepath is None or not os.path.exists(filepath):
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Save the invoice to the database
     try:
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
@@ -398,7 +365,6 @@ def send_invoice_to_db():
     finally:
         conn.close()
 
-    # Confirm the invoice is sent to the database
     return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
 
 if __name__ == '__main__':
