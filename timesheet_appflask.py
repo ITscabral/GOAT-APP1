@@ -91,23 +91,25 @@ def admin_dashboard():
         "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
     }
 
+    # Fetch employees, time entries, and invoices
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
 
-    # Explicitly query for all invoices and ensure they are linked correctly with users
+    # Fetch invoices and print to confirm retrieval
     invoices = conn.execute('''
         SELECT invoices.*, users.username as employee_name
         FROM invoices
         JOIN users ON invoices.username = users.username
     ''').fetchall()
 
+    print("Invoices Retrieved from Database:", invoices)  # Debug print
+
     conn.close()
 
-    # Process employee list by team
+    # Prepare employee list by team
     employee_list = []
     for team_name, team_members in teams.items():
         for member in team_members:
-            # Match usernames with case-insensitivity and format for display
             employee_data = next((emp for emp in employees if emp['username'].strip().title() == member), None)
             if employee_data:
                 employee_list.append({
@@ -122,7 +124,7 @@ def admin_dashboard():
                     'role': None
                 })
 
-    # Process time entry list
+    # Prepare time entry list
     entry_list = []
     for entry in entries:
         entry_data = {
@@ -137,7 +139,7 @@ def admin_dashboard():
         }
         entry_list.append(entry_data)
 
-    # Process invoice list
+    # Prepare invoice list and ensure format
     invoice_list = []
     for invoice in invoices:
         invoice_data = {
@@ -150,8 +152,10 @@ def admin_dashboard():
         }
         invoice_list.append(invoice_data)
 
-    return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
+    print("Final Invoice List Sent to Template:", invoice_list)  # Debug print
 
+    # Render template
+    return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
 
 
 @app.route('/employee_dashboard/<username>')
