@@ -63,6 +63,7 @@
                 <th>Start Time</th>
                 <th>End Time</th>
                 <th>Total Hours</th>
+                <th>Action</th>
             </tr>
             </thead>
             <tbody>
@@ -72,6 +73,15 @@
                 <td>{{ entry['start_time'] }}</td>
                 <td>{{ entry['end_time'] }}</td>
                 <td>{{ entry['total_hours'] }}</td>
+                <td>
+                    <form action="{{ url_for('delete_time_entry') }}" method="POST" style="display:inline;">
+                        <input type="hidden" name="username" value="{{ username }}">
+                        <input type="hidden" name="date" value="{{ entry['date'] }}">
+                        <input type="hidden" name="start_time" value="{{ entry['start_time'] }}">
+                        <input type="hidden" name="end_time" value="{{ entry['end_time'] }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
             </tr>
             {% endfor %}
             </tbody>
@@ -82,10 +92,10 @@
     <div id="invoiceActions" class="mt-5">
         <h3>Invoice Actions</h3>
         <!-- Generate Invoice Form -->
-       <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
-    <input type="hidden" name="username" value="{{ username }}">
-    <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
-</form>
+        <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
+        </form>
         <!-- Send Invoice Form -->
         <form id="sendInvoiceForm" action="{{ url_for('send_invoice') }}" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
@@ -97,7 +107,6 @@
 
 <script>
     document.getElementById("generateInvoiceForm").onsubmit = function(event) {
-        // Proceed with form submission and fetch the response
         fetch(this.action, {
             method: 'POST',
             body: new FormData(this)
@@ -106,7 +115,7 @@
             if (!response.ok) {
                 throw new Error('Network response was not ok ' + response.statusText);
             }
-            return response.blob(); // Return response as a Blob
+            return response.blob();
         })
         .then(blob => {
             const url = window.URL.createObjectURL(blob);
