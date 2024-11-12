@@ -263,9 +263,9 @@ def generate_invoice_route():
     invoice_date = datetime.now().strftime("%Y-%m-%d")
 
     existing_invoice = conn.execute(
-        'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
-        (username, invoice_date, total_hours)
-    ).fetchone()
+    'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
+    (username, invoice_date, total_hours)
+).fetchone()
 
     if existing_invoice:
         conn.close()
