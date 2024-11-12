@@ -44,7 +44,6 @@ def initialize_db():
     conn.commit()
     conn.close()
 
-# Call the initialization function
 initialize_db()
 
 def get_db_connection():
@@ -102,10 +101,10 @@ def login():
 def admin_dashboard():
     conn = get_db_connection()
     teams = {
-        "Team 1 - Jackson C & Lucas C": ["jackson_carneiro", "lucas_cabral"],
-        "Team 2 - Bruno V & Thallys C": ["bruno_vianello", "thallys_carvalho"],
-        "Team 3 - Michel S & Giulliano C": ["michel_silva", "giulliano_cabral"],
-        "Team 4 - Pedro C & Caio H": ["pedro_cadenas", "caio_henrique"],
+        "Team 1 - Jackson C & Lucas C": ["Jackson Carneiro", "Lucas Cabral"],
+        "Team 2 - Bruno V & Thallys C": ["Bruno Vianello", "Thallys Carvalho"],
+        "Team 3 - Michel S & Giulliano C": ["Michel Silva", "Giulliano Cabral"],
+        "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
     }
 
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
@@ -120,7 +119,7 @@ def admin_dashboard():
     employee_list = []
     for team_name, team_members in teams.items():
         for member in team_members:
-            employee_data = next((emp for emp in employees if emp['username'] == member), None)
+            employee_data = next((emp for emp in employees if emp['username'].strip().title() == member), None)
             if employee_data:
                 employee_list.append({'username': member, 'team': team_name, 'role': employee_data['role']})
             else:
@@ -129,12 +128,12 @@ def admin_dashboard():
     entry_list = []
     for entry in entries:
         entry_data = {
-            'username': entry['username'],
+            'username': entry['username'].strip().title(),
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
             'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2),
-            'team': next((team for team, members in teams.items() if entry['username'] in members), None)  # Add team information for filtering
+            'team': next((team for team, members in teams.items() if entry['username'].strip().title() in members), None)
         }
         entry_list.append(entry_data)
 
@@ -142,7 +141,7 @@ def admin_dashboard():
     for invoice in invoices:
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': invoice['employee_name'],
+            'username': invoice['employee_name'].strip().title(),
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
@@ -224,10 +223,7 @@ def generate_invoice_route():
     if not username:
         return jsonify({'error': 'Username is required'}), 400
 
-    # Connect to the database
     conn = get_db_connection()
-
-    # Fetch time entries for the employee
     entries = conn.execute(
         'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
         (username,)
@@ -237,18 +233,14 @@ def generate_invoice_route():
         conn.close()
         return jsonify({'error': 'No time entries found for this user'}), 400
 
-    # Prepare timesheet data and calculate total hours
     timesheet_data = [
         (entry['date'], entry['start_time'], entry['end_time'],
          round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
         for entry in entries
     ]
     total_hours = sum(entry[3] for entry in timesheet_data)
-
-    # Get today's date for invoice date
     invoice_date = datetime.now().strftime("%Y-%m-%d")
 
-    # Check for duplicate invoice by looking for an identical date, username, and total_hours
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
         (username, invoice_date, total_hours)
@@ -258,26 +250,20 @@ def generate_invoice_route():
         conn.close()
         return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
 
-    # If no duplicate is found, proceed to create a new invoice
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
-
-    # Company details
     company_info = {
         "Company Name": "GOAT Removals",
         "Address": "123 Business St, Sydney, Australia",
         "Phone": "+61 2 1234 5678"
     }
 
-    # Generate the invoice PDF
     filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
 
-    # Verify that the PDF was successfully created
     if filepath is None or not os.path.exists(filepath):
         conn.close()
         print("[ERROR] Invoice file was not created.")
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Save the invoice to the database
     try:
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
@@ -291,7 +277,6 @@ def generate_invoice_route():
     finally:
         conn.close()
 
-    # Return the generated PDF file if it exists
     if os.path.exists(filepath):
         print(f"[DEBUG] Serving the invoice file: {filepath}")
         return send_file(filepath, as_attachment=True)
