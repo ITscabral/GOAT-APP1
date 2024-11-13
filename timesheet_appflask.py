@@ -342,6 +342,23 @@ def send_invoice_to_db():
         conn.close()
         return jsonify({'error': 'No time entries found for this user'}), 400
 
+    invoice_date = datetime.now().strftime("%Y-%m-%d")
+    total_hours = sum(
+        (datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0
+        for entry in entries
+    )
+
+    existing_invoice = conn.execute(
+        'SELECT * FROM invoices WHERE username = ? AND date = ?',
+        (username, invoice_date)
+    ).fetchone()
+
+    if existing_invoice:
+        conn.close()
+        return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
+
+    # Additional code to handle creating a new invoice if it does not exist
+    
     # Prepare timesheet data and calculate total hours
     timesheet_data = [
         (entry['date'], entry['start_time'], entry['end_time'],
