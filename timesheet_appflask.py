@@ -320,31 +320,31 @@ def send_invoice_to_db():
         conn.close()
         return jsonify({'error': 'No time entries found for this user'}), 400
 
-    # Calculate total hours for the invoice
     total_hours = sum(
         (datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0
         for entry in entries
     )
-    invoice_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Using full datetime for uniqueness
 
-    # Check if an identical invoice already exists
+    # Include full timestamp for unique identification
+    invoice_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Check for an existing invoice for the same user and date with the same hours
     existing_invoice = conn.execute(
-        'SELECT * FROM invoices WHERE username = ? AND date = ?',
-        (username, invoice_date[:10])  # Comparing only the date part
+        'SELECT * FROM invoices WHERE username = ? AND date(date) = date(?) AND total_hours = ?',
+        (username, invoice_date, total_hours)
     ).fetchone()
 
     if existing_invoice:
         conn.close()
-        return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
+        return jsonify({'error': 'An identical invoice already exists for this date and hours.'}), 400
 
-    # Prepare timesheet data for the invoice
+    # Prepare data for invoice
     timesheet_data = [
         (entry['date'], entry['start_time'], entry['end_time'],
          round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
         for entry in entries
     ]
 
-    # Generate a unique invoice number and path
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
     company_info = {
         "Company Name": "GOAT Removals",
@@ -357,7 +357,6 @@ def send_invoice_to_db():
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Save the invoice details in the database
     try:
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
