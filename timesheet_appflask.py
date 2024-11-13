@@ -308,10 +308,8 @@ from invoice_generator import generate_invoice  # Ensure this import works as ex
 @app.route('/send_invoice_to_db', methods=['POST'])
 def send_invoice_to_db():
     username = request.form.get('username')
-
     if not username:
         return jsonify({'error': 'Username is required'}), 400
-
     conn = get_db_connection()
 
     # Check for the latest generated invoice for this user
