@@ -353,7 +353,7 @@ def send_invoice_to_db():
 
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
-        (username, invoice_date, total_hours)
+        (username, invoice_date)
     ).fetchone()
 
     if existing_invoice:
