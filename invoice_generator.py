@@ -12,11 +12,10 @@ logger = logging.getLogger(__name__)
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    target_directory = os.path.join(BASE_DIR, "invoices")
-    logger.info(f"Target directory: {target_directory}")
+target_directory = os.path.join(BASE_DIR, "invoices")
 
-    if not os.path.exists(target_directory):
-        os.makedirs(target_directory)
+if not os.path.exists(target_directory):
+    os.makedirs(target_directory)
 
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
     logger.info(f"Full path to invoice: {filename}")
