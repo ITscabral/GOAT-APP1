@@ -1,5 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directory
-import sqlite3
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directoryimport sqlite3
 import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
@@ -393,5 +392,11 @@ def send_invoice_to_db():
 
     return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
 
+@app.route('/download_invoice/<filename>')
+def download_invoice(filename):
+    # Path to the directory where invoices are stored
+    directory = os.path.join(app.root_path, 'static', 'invoices')
+    return send_from_directory(directory, filename)
+    
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
