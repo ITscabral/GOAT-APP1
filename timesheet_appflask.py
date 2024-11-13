@@ -348,6 +348,7 @@ def send_invoice_to_db():
         for entry in entries
     )
 
+    # Check if an identical invoice already exists
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ?',
         (username, invoice_date)
@@ -356,7 +357,7 @@ def send_invoice_to_db():
     if existing_invoice:
         conn.close()
         return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
-
+        
     # Additional code to handle creating a new invoice if it does not exist
     
     # Prepare timesheet data and calculate total hours
