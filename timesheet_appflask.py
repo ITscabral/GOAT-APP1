@@ -91,6 +91,7 @@ def admin_dashboard():
         "Team 4 - Pedro C & Caio H": ["Pedro Cadenas", "Caio Henrique"],
     }
 
+    conn.row_factory = sqlite3.Row  # Access query results by column name
     employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
     entries = conn.execute('SELECT * FROM time_entries').fetchall()
     invoices = conn.execute('SELECT * FROM invoices').fetchall()
@@ -133,7 +134,7 @@ def admin_dashboard():
         invoice_list.append(invoice_data)
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
-
+    
 @app.route('/add_employee', methods=['POST'])
 def add_employee():
     name = request.form.get('name')
