@@ -1,10 +1,10 @@
 import os
 import logging
+import stat
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
-import stat
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -12,35 +12,40 @@ logger = logging.getLogger(__name__)
 
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
+
+    # Set the base directory and target folder
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    target_directory = os.path.join(BASE_DIR, "invoices")  # Correct indentation
-    if not os.path.exists(target_directory):  # Check if directory exists
+    target_directory = os.path.join(BASE_DIR, "invoices")
+    
+    # Ensure the target directory exists and set appropriate permissions
+    if not os.path.exists(target_directory):
         os.makedirs(target_directory)
-        # Set directory permissions
+        # Set directory permissions (read, write, execute for user; read for group and others)
         os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 
+    # Construct the filename for the PDF
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
-    logger.info(f"Full path to invoice: {filename}")
+    logger.info(f"Attempting to create invoice file at: {filename}")
 
     try:
         # Create PDF canvas
         c = canvas.Canvas(filename, pagesize=A4)
-        
-        # Logo insertion
+
+        # Optional: Insert a logo if it exists
         logo_path = os.path.join(BASE_DIR, "company_logo.png")
         if os.path.exists(logo_path):
             c.drawImage(logo_path, 30, 770, width=120, height=80)
         else:
             logger.warning("Logo not found, skipping.")
 
-        # Company and invoice details
+        # Add company and invoice details
         c.setFont("Helvetica-Bold", 12)
         c.drawString(150, 800, company_info.get("Company Name", "GOAT Removals"))
         c.setFont("Helvetica", 10)
         c.drawString(150, 780, company_info.get("Address", "123 Business St, Sydney, Australia"))
         c.drawString(150, 765, f"Phone: {company_info.get('Phone', '+61 2 1234 5678')}")
 
-        # Invoice title and employee info
+        # Add invoice title and employee information
         c.setFont("Helvetica-Bold", 16)
         c.drawString(230, 720, f"Invoice #{invoice_number}")
         date_generated = datetime.now().strftime('%Y-%m-%d %A')
@@ -49,7 +54,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.setFont("Helvetica", 10)
         c.drawString(30, 670, f"Date Generated: {date_generated}")
 
-        # Timesheet details
+        # Add timesheet details
         y = 640
         for entry in timesheet_data:
             date, start, end, hours = entry
@@ -61,7 +66,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
             c.drawString(350, y, f"{hours:.2f}")
             y -= 20
 
-        # Summary of hours and payment
+        # Add summary of hours and payment
         total_payment = total_hours * hourly_rate
         c.setFont("Helvetica-Bold", 12)
         c.drawString(30, y - 30, f"Total Hours: {total_hours:.2f}")
@@ -74,8 +79,9 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.drawString(30, 50, "Thank you for your work! If you have any questions, contact our office.")
         c.save()
         
-        logger.info(f"PDF saved at {filename}")
+        logger.info(f"PDF successfully saved at {filename}")
 
+        # Confirm file creation and return path
         return filename if os.path.exists(filename) else None
 
     except Exception as e:
