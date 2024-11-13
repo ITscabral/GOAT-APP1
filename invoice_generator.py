@@ -4,6 +4,7 @@ from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
+import stat
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -12,12 +13,12 @@ logger = logging.getLogger(__name__)
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-target_directory = os.path.join(BASE_DIR, "invoices")
-filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
-
-    if not os.path.exists(target_directory):  # Corrected indentation
+    target_directory = os.path.join(BASE_DIR, "invoices")  # Correct indentation
+    if not os.path.exists(target_directory):  # Check if directory exists
         os.makedirs(target_directory)
-    
+        # Set directory permissions
+        os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
     logger.info(f"Full path to invoice: {filename}")
 
