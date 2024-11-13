@@ -330,7 +330,9 @@ def send_invoice_to_db():
 
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
-    directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+    # Ensure the path is set correctly
+    directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'invoices')
+    print(f"Trying to access file: {os.path.join(directory, filename)}")
     return send_from_directory(directory, filename)
     
 if __name__ == '__main__':
