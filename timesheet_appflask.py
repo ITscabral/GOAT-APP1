@@ -329,7 +329,7 @@ def send_invoice_to_db():
 
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
-    directory = os.path.join(app.root_path, 'static', 'invoices')
+    directory = os.path.join(app.root_path, 'invoices')
     return send_from_directory(directory, filename)
 
 if __name__ == '__main__':
