@@ -108,7 +108,7 @@
         <div id="feedbackMessage" class="alert mt-3"></div>
     </div>
 
-    <!-- Invoice History -->
+    <!-- Invoice History Section -->
 <div id="invoiceHistory" class="mt-5">
     <h3>Your Invoices</h3>
     <table class="table table-striped">
@@ -128,7 +128,8 @@
                 <td>{{ invoice.date }}</td>
                 <td>{{ invoice.total_hours }}</td>
                 <td>{{ invoice.total_payment }}</td>
-                <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-sm btn-info" target="_blank">Open PDF</a></td>
+                <!-- Link to open the PDF -->
+                <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
             </tr>
             {% endfor %}
         </tbody>
