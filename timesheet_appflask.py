@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file 
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directory
 import sqlite3
 import os
 from datetime import datetime, timedelta
@@ -133,6 +133,7 @@ def admin_dashboard():
         invoice_list.append(invoice_data)
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
+
 @app.route('/add_employee', methods=['POST'])
 def add_employee():
     name = request.form.get('name')
@@ -154,7 +155,6 @@ def add_employee():
     except sqlite3.IntegrityError:
         return jsonify({'error': 'User already exists!'}), 400
 
-
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
@@ -174,7 +174,6 @@ def employee_dashboard(username):
         }
         entry_list.append(entry_data)
     return render_template('employee_dashboard.html', username=username, entries=entry_list)
-
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
@@ -225,7 +224,7 @@ def delete_time_entry():
 
     except sqlite3.Error as e:
         return jsonify({'error': f"Error during deletion: {e}"}), 500
-        
+
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username')
@@ -317,6 +316,11 @@ def employee_invoices(username):
         })
     
     return jsonify(invoice_list), 200
+
+# New route to serve PDF invoices
+@app.route('/download_invoice/<filename>')
+def download_invoice(filename):
+    return send_from_directory(directory='static/invoices', path=filename, as_attachment=False)
 
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
