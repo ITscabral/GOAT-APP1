@@ -351,15 +351,16 @@ def send_invoice_to_db():
     total_hours = sum(entry[3] for entry in timesheet_data)
     invoice_date = datetime.now().strftime("%Y-%m-%d")
 
-    existing_invoice = conn.execute(
-        'SELECT * FROM invoices WHERE username = ? AND date = ? AND total_hours = ?',
-        (username, invoice_date)
-    ).fetchone()
+# Modify the check to only look for the same username and date, ignoring total_hours
+existing_invoice = conn.execute(
+    'SELECT * FROM invoices WHERE username = ? AND date = ?',
+    (username, invoice_date)
+).fetchone()
 
-    if existing_invoice:
-        conn.close()
-        return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
-
+if existing_invoice:
+    conn.close()
+    return jsonify({'error': 'An identical invoice already exists for this date.'}), 400
+    
     # If no duplicate is found, proceed to create a new invoice
     invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
 
