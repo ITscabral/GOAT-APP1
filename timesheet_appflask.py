@@ -318,11 +318,6 @@ def employee_invoices(username):
     
     return jsonify(invoice_list), 200
 
-# New route to serve PDF invoices
-@app.route('/download_invoice/<filename>')
-def download_invoice(filename):
-    return send_from_directory(directory='static/invoices', path=filename, as_attachment=False)
-
 @app.route('/download_timesheet_db')
 def download_timesheet_db():
     try:
