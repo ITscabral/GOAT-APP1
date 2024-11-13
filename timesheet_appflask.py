@@ -330,11 +330,8 @@ def send_invoice_to_db():
 
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
-    try:
-        # Serves files from the invoices directory only
-        return send_from_directory(INVOICES_DIRECTORY, filename, as_attachment=True)
-    except FileNotFoundError:
-        abort(404)  # Returns a 404 error if the file is not found
+    directory = os.path.join(os.path.dirname(os.path.abspath(__file__)), "invoices")
+    return send_from_directory(directory, filename)
     
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
