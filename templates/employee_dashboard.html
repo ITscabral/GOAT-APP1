@@ -25,6 +25,9 @@
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
+        #feedbackMessage {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -101,6 +104,8 @@
             <input type="hidden" name="username" value="{{ username }}">
             <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
         </form>
+        <!-- Feedback Message -->
+        <div id="feedbackMessage" class="alert mt-3"></div>
     </div>
 
     <!-- Invoice History -->
@@ -123,15 +128,13 @@
     </div>
 
     <script>
-        // Function to convert 24-hour time format to 12-hour format with AM/PM
         function formatTimeTo12Hour(time24) {
             const [hours, minutes] = time24.split(':');
             const amPm = +hours >= 12 ? 'PM' : 'AM';
-            const hours12 = ((+hours + 11) % 12 + 1); // Convert 24-hour to 12-hour
+            const hours12 = ((+hours + 11) % 12 + 1);
             return `${hours12}:${minutes} ${amPm}`;
         }
 
-        // Apply the 12-hour format to each time display
         document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll('.time-display').forEach(function(td) {
                 td.textContent = formatTimeTo12Hour(td.textContent);
@@ -163,25 +166,43 @@
                 console.error('Error generating invoice:', error);
                 alert("Error generating invoice.");
             });
-
-            event.preventDefault(); // Prevents form from submitting normally
+            event.preventDefault();
         };
 
-        // Fetch and display invoices on load
+        document.getElementById("sendInvoiceForm").onsubmit = function(event) {
+            event.preventDefault();
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                const feedbackMessage = document.getElementById('feedbackMessage');
+                if (data.error) {
+                    feedbackMessage.className = "alert alert-danger";
+                    feedbackMessage.textContent = data.error;
+                } else {
+                    feedbackMessage.className = "alert alert-success";
+                    feedbackMessage.textContent = data.message;
+                }
+                feedbackMessage.style.display = "block";
+            })
+            .catch(error => {
+                console.error('Error sending invoice:', error);
+                alert("Error sending invoice.");
+            });
+        };
+
         document.addEventListener("DOMContentLoaded", function() {
             fetchInvoices();
-
-            // Load invoices and display them
             function fetchInvoices() {
                 fetch(`/employee_invoices/{{ username }}`)
                     .then(response => response.json())
                     .then(invoices => {
                         const invoiceTableBody = document.getElementById('invoiceTableBody');
-                        invoiceTableBody.innerHTML = '';  // Clear previous rows
-
+                        invoiceTableBody.innerHTML = '';
                         invoices.forEach(invoice => {
                             const row = document.createElement('tr');
-                            
                             row.innerHTML = `
                                 <td>${invoice.invoice_number}</td>
                                 <td>${invoice.date}</td>
@@ -189,7 +210,6 @@
                                 <td>${invoice.total_payment}</td>
                                 <td><a href="/download_invoice/${encodeURIComponent(invoice.filename)}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
                             `;
-                            
                             invoiceTableBody.appendChild(row);
                         });
                     })
