@@ -68,33 +68,33 @@
     </div>
 
     <!-- Previous Invoices -->
-    <div id="invoicesSection" class="mt-5">
-        <h2>Previous Invoices</h2>
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>Invoice #</th>
-                <th>Username</th>
-                <th>Date</th>
-                <th>Total Hours</th>
-                <th>Total Payment</th>
-                <th>Action</th>
-            </tr>
-            </thead>
-            <tbody id="invoicesTable">
-            {% for invoice in invoices %}
-            <tr class="invoiceRow" data-username="{{ invoice.username | lower | replace(' ', '') }}">
-                <td>{{ invoice.invoice_number }}</td>
-                <td>{{ invoice.username | title }}</td>
-                <td>{{ invoice.date }}</td>
-                <td>{{ invoice.total_hours }}</td>
-                <td>{{ invoice.total_payment }}</td>
-                <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-primary" target="_blank">Open</a></td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<div id="invoicesSection" class="mt-5">
+    <h2>Previous Invoices</h2>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>Invoice #</th>
+            <th>Username</th>
+            <th>Date</th>
+            <th>Total Hours</th>
+            <th>Total Payment</th>
+            <th>Action</th>
+        </tr>
+        </thead>
+        <tbody id="invoicesTable">
+        {% for invoice in invoices %}
+        <tr class="invoiceRow" data-username="{{ invoice.username | lower | replace(' ', '') }}">
+            <td>{{ invoice.invoice_number }}</td>
+            <td>{{ invoice.username | title }}</td>
+            <td>{{ invoice.date }}</td>
+            <td>{{ invoice.total_hours }}</td>
+            <td>{{ invoice.total_payment }}</td>
+            <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-primary" target="_blank">Open PDF</a></td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
 
     <!-- Add New Employee Form -->
     <div id="addEmployeeSection" class="mt-5">
