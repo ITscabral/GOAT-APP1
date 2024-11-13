@@ -88,119 +88,119 @@
         </table>
     </div>
 
-<!-- Invoice Actions -->
-<div id="invoiceActions" class="mt-5">
-    <h3>Invoice Actions</h3>
-    <!-- Generate Invoice Form -->
-    <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
-        <input type="hidden" name="username" value="{{ username }}">
-        <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
-    </form>
-    <!-- Send Invoice Form -->
-    <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
-        <input type="hidden" name="username" value="{{ username }}">
-        <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
-    </form>
-</div>
+    <!-- Invoice Actions -->
+    <div id="invoiceActions" class="mt-5">
+        <h3>Invoice Actions</h3>
+        <!-- Generate Invoice Form -->
+        <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
+        </form>
+        <!-- Send Invoice Form -->
+        <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
+            <input type="hidden" name="username" value="{{ username }}">
+            <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
+        </form>
+    </div>
 
-<!-- Invoice History -->
-<div id="invoiceHistory" class="mt-5">
-    <h3>Your Invoices</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Invoice Number</th>
-                <th>Date</th>
-                <th>Total Hours</th>
-                <th>Total Payment</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="invoiceTableBody">
-            <!-- Invoices will be loaded here -->
-        </tbody>
-    </table>
-</div>
+    <!-- Invoice History -->
+    <div id="invoiceHistory" class="mt-5">
+        <h3>Your Invoices</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Invoice Number</th>
+                    <th>Date</th>
+                    <th>Total Hours</th>
+                    <th>Total Payment</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="invoiceTableBody">
+                <!-- Invoices will be loaded here -->
+            </tbody>
+        </table>
+    </div>
 
-<script>
-    // Function to convert 24-hour time format to 12-hour format with AM/PM
-    function formatTimeTo12Hour(time24) {
-        const [hours, minutes] = time24.split(':');
-        const amPm = +hours >= 12 ? 'PM' : 'AM';
-        const hours12 = ((+hours + 11) % 12 + 1); // Convert 24-hour to 12-hour
-        return `${hours12}:${minutes} ${amPm}`;
-    }
-
-    // Apply the 12-hour format to each time display
-    document.addEventListener("DOMContentLoaded", function() {
-        document.querySelectorAll('.time-display').forEach(function(td) {
-            td.textContent = formatTimeTo12Hour(td.textContent);
-        });
-    });
-
-    document.getElementById("generateInvoiceForm").onsubmit = function(event) {
-        fetch(this.action, {
-            method: 'POST',
-            body: new FormData(this)
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok ' + response.statusText);
-            }
-            return response.blob();
-        })
-        .then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.style.display = 'none';
-            a.href = url;
-            a.download = `Invoice_${new Date().toISOString()}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-        })
-        .catch(error => {
-            console.error('Error generating invoice:', error);
-            alert("Error generating invoice.");
-        });
-
-        event.preventDefault(); // Prevents form from submitting normally
-    };
-
-    // Fetch and display invoices on load
-    document.addEventListener("DOMContentLoaded", function() {
-        fetchInvoices();
-
-        // Load invoices and display them
-        function fetchInvoices() {
-            fetch(`/employee_invoices/{{ username }}`)
-                .then(response => response.json())
-                .then(invoices => {
-                    const invoiceTableBody = document.getElementById('invoiceTableBody');
-                    invoiceTableBody.innerHTML = '';  // Clear previous rows
-
-                    invoices.forEach(invoice => {
-                        const row = document.createElement('tr');
-                        
-                        row.innerHTML = `
-                            <td>${invoice.invoice_number}</td>
-                            <td>${invoice.date}</td>
-                            <td>${invoice.total_hours}</td>
-                            <td>${invoice.total_payment}</td>
-                            <td><a href="${invoice.filename}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
-                        `;
-                        
-                        invoiceTableBody.appendChild(row);
-                    });
-                })
-                .catch(error => {
-                    console.error('Error loading invoices:', error);
-                    alert("Error loading invoices.");
-                });
+    <script>
+        // Function to convert 24-hour time format to 12-hour format with AM/PM
+        function formatTimeTo12Hour(time24) {
+            const [hours, minutes] = time24.split(':');
+            const amPm = +hours >= 12 ? 'PM' : 'AM';
+            const hours12 = ((+hours + 11) % 12 + 1); // Convert 24-hour to 12-hour
+            return `${hours12}:${minutes} ${amPm}`;
         }
-    });
-</script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+        // Apply the 12-hour format to each time display
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll('.time-display').forEach(function(td) {
+                td.textContent = formatTimeTo12Hour(td.textContent);
+            });
+        });
+
+        document.getElementById("generateInvoiceForm").onsubmit = function(event) {
+            fetch(this.action, {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.blob();
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = `Invoice_${new Date().toISOString()}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+            })
+            .catch(error => {
+                console.error('Error generating invoice:', error);
+                alert("Error generating invoice.");
+            });
+
+            event.preventDefault(); // Prevents form from submitting normally
+        };
+
+        // Fetch and display invoices on load
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchInvoices();
+
+            // Load invoices and display them
+            function fetchInvoices() {
+                fetch(`/employee_invoices/{{ username }}`)
+                    .then(response => response.json())
+                    .then(invoices => {
+                        const invoiceTableBody = document.getElementById('invoiceTableBody');
+                        invoiceTableBody.innerHTML = '';  // Clear previous rows
+
+                        invoices.forEach(invoice => {
+                            const row = document.createElement('tr');
+                            
+                            row.innerHTML = `
+                                <td>${invoice.invoice_number}</td>
+                                <td>${invoice.date}</td>
+                                <td>${invoice.total_hours}</td>
+                                <td>${invoice.total_payment}</td>
+                                <td><a href="/download_invoice/${encodeURIComponent(invoice.filename)}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
+                            `;
+                            
+                            invoiceTableBody.appendChild(row);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading invoices:', error);
+                        alert("Error loading invoices.");
+                    });
+            }
+        });
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
