@@ -4,7 +4,6 @@ import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
-
 app = Flask(__name__)
 
 # Initialize the database and create tables if they don't exist
@@ -329,8 +328,9 @@ def send_invoice_to_db():
 
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
+    # Point to the invoices directory
     directory = os.path.join(app.root_path, 'invoices')
     return send_from_directory(directory, filename)
-
+    
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
