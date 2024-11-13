@@ -1,4 +1,5 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directoryimport sqlite3
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directory
+import sqlite3
 import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
