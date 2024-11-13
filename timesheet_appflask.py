@@ -250,12 +250,9 @@ def generate_invoice_route():
     ]
     total_hours = sum(entry[3] for entry in timesheet_data)
     invoice_date = datetime.now().strftime("%Y-%m-%d")
-    invoice_count = conn.execute(
-        'SELECT COUNT(*) FROM invoices WHERE username = ? AND date = ?',
-        (username, invoice_date)
-    ).fetchone()[0]
 
-    invoice_number = f"{invoice_date.replace('-', '')}_{invoice_count + 1}"
+    # Generate a unique invoice number based on date and time
+    invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
 
     company_info = {
         "Company Name": "GOAT Removals",
@@ -268,6 +265,7 @@ def generate_invoice_route():
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
+    # Save invoice to the database
     try:
         conn.execute(
             'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
@@ -314,56 +312,20 @@ def send_invoice_to_db():
         return jsonify({'error': 'Username is required'}), 400
 
     conn = get_db_connection()
-    entries = conn.execute(
-        'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
+
+    # Check for the latest generated invoice for this user
+    existing_invoice = conn.execute(
+        'SELECT * FROM invoices WHERE username = ? ORDER BY date DESC LIMIT 1',
         (username,)
-    ).fetchall()
+    ).fetchone()
 
-    if not entries:
+    if not existing_invoice:
         conn.close()
-        return jsonify({'error': 'No time entries found for this user'}), 400
+        return jsonify({'error': 'No generated invoice found for this user to send.'}), 400
 
-    total_hours = sum(
-        (datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0
-        for entry in entries
-    )
-
-    invoice_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    timesheet_data = [
-        (entry['date'], entry['start_time'], entry['end_time'],
-         round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
-        for entry in entries
-    ]
-
-    # Get a unique invoice number
-    invoice_number = conn.execute('SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices').fetchone()[0]
-    company_info = {
-        "Company Name": "GOAT Removals",
-        "Address": "123 Business St, Sydney, Australia",
-        "Phone": "+61 2 1234 5678"
-    }
-    filename = f"Invoice_{invoice_number}_{username}_{datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
-
-    # Generate the invoice
-    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
-
-    if filepath is None or not os.path.exists(filepath):
-        conn.close()
-        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
-
-    try:
-        conn.execute(
-            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
-            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filename)
-        )
-        conn.commit()
-    except sqlite3.Error as e:
-        conn.close()
-        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
-    finally:
-        conn.close()
-
-    return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
+    # Send the last generated invoice details to the admin dashboard
+    conn.close()
+    return jsonify({'message': f'Invoice {existing_invoice["invoice_number"]} sent successfully to admin dashboard'})
 
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
