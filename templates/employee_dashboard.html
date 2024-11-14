@@ -128,8 +128,8 @@
                 <td>{{ invoice.date }}</td>
                 <td>{{ invoice.total_hours }}</td>
                 <td>{{ invoice.total_payment }}</td>
-                <!-- Link to open the PDF -->
-                <a href="{{ url_for('download_invoice', filename=invoice.filename) }}">Open PDF</a>
+                <!-- Link to open the PDF, placed inside a <td> cell and with filename passed correctly -->
+                <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}">Open PDF</a></td>
             </tr>
             {% endfor %}
         </tbody>
