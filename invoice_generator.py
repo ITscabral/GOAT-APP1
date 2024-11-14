@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    # Set the target directory to the persistent disk path on Render
     target_directory = "/var/data/invoices"
     
     # Ensure the target directory exists and has appropriate permissions
@@ -20,14 +20,16 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         os.makedirs(target_directory)
         os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 
+    # Define the filename path
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
     logger.info(f"Attempting to create invoice file at: {filename}")
 
     try:
+        # Create PDF canvas
         c = canvas.Canvas(filename, pagesize=A4)
 
         # Optional: Insert a logo if it exists
-        logo_path = os.path.join(BASE_DIR, "company_logo.png")
+        logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "company_logo.png")
         if os.path.exists(logo_path):
             c.drawImage(logo_path, 30, 770, width=120, height=80)
         else:
@@ -76,6 +78,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         
         logger.info(f"PDF successfully saved at {filename}")
 
+        # Check if the file was saved successfully
         return filename if os.path.exists(filename) else None
 
     except Exception as e:
