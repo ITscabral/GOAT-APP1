@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    target_directory = os.path.join(BASE_DIR, "invoices")
+    target_directory = "/var/data/invoices"
     
     # Ensure the target directory exists and has appropriate permissions
     if not os.path.exists(target_directory):
