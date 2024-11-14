@@ -244,16 +244,27 @@ def generate_invoice_route():
         conn.close()
         return jsonify({'error': 'No time entries found for this user'}), 400
 
+    # Fetch the most recent invoice
+    invoice_date = datetime.now().strftime("%Y-%m-%d")
+    invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
+    
+    # Check if an invoice was already generated today for this user
+    existing_invoice = conn.execute(
+        'SELECT * FROM invoices WHERE username = ? AND date = ?',
+        (username, invoice_date)
+    ).fetchone()
+
+    if existing_invoice:
+        conn.close()
+        return jsonify({'error': 'An invoice for this date already exists'}), 400
+
+    # If no duplicate, create a new invoice
     timesheet_data = [
         (entry['date'], entry['start_time'], entry['end_time'],
          round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
         for entry in entries
     ]
     total_hours = sum(entry[3] for entry in timesheet_data)
-    invoice_date = datetime.now().strftime("%Y-%m-%d")
-
-    # Generate a unique invoice number based on date and time
-    invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
 
     company_info = {
         "Company Name": "GOAT Removals",
