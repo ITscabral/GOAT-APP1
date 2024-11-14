@@ -217,7 +217,7 @@
                                 <td>${invoice.date}</td>
                                 <td>${invoice.total_hours}</td>
                                 <td>${invoice.total_payment}</td>
-                                <td><a href="/download_invoice/${encodeURIComponent(invoice.filename)}" target="_blank" class="btn btn-sm btn-info">Open PDF</a></td>
+                                <a href="{{ url_for('download_invoice', filename=invoice_filename) }}">Open PDF</a>
                             `;
                             invoiceTableBody.appendChild(row);
                         });
