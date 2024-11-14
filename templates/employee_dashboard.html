@@ -129,7 +129,7 @@
                 <td>{{ invoice.total_hours }}</td>
                 <td>{{ invoice.total_payment }}</td>
                 <!-- Link to open the PDF -->
-                <a href="{{ url_for('download_invoice', filename=invoice.filename) }}" target="_blank" class="btn btn-info">Open PDF</a>
+                <a href="{{ url_for('download_invoice', filename=invoice.filename) }}">Open PDF</a>
             </tr>
             {% endfor %}
         </tbody>
