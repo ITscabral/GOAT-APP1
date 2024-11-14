@@ -12,23 +12,18 @@ logger = logging.getLogger(__name__)
 
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
-
-    # Set the base directory and target folder
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     target_directory = os.path.join(BASE_DIR, "invoices")
     
-    # Ensure the target directory exists and set appropriate permissions
+    # Ensure the target directory exists and has appropriate permissions
     if not os.path.exists(target_directory):
         os.makedirs(target_directory)
-        # Set directory permissions (read, write, execute for user; read for group and others)
         os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 
-    # Construct the filename for the PDF
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
     logger.info(f"Attempting to create invoice file at: {filename}")
 
     try:
-        # Create PDF canvas
         c = canvas.Canvas(filename, pagesize=A4)
 
         # Optional: Insert a logo if it exists
@@ -81,7 +76,6 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         
         logger.info(f"PDF successfully saved at {filename}")
 
-        # Confirm file creation and return path
         return filename if os.path.exists(filename) else None
 
     except Exception as e:
