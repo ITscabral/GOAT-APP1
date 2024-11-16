@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
 
+
 app = Flask(__name__)
 
 # Initialize the database and create tables if they don't exist
@@ -135,25 +136,36 @@ def admin_dashboard():
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
 
+@app.route('/add_employee', methods=['POST'])
+def add_employee():
+    name = request.form.get('name')
+    role = request.form.get('role')
+    phone_number = request.form.get('phone_number')
+
+    if not all([name, role, phone_number]):
+        return jsonify({'error': 'All fields are required!'}), 400
+
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
+            (name.lower().replace(" ", "_"), '123', role, phone_number)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin_dashboard'))
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'User already exists!'}), 400
+
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
-
-    # Fetch time entries
     entries = conn.execute(
         'SELECT * FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?', 
         (username.lower().replace(" ", ""),)
     ).fetchall()
-
-    # Fetch invoices
-    invoices = conn.execute(
-        'SELECT invoice_number, date, total_hours, total_payment, filename FROM invoices WHERE username = ?',
-        (username,)
-    ).fetchall()
-
     conn.close()
 
-    # Pass both time entries and invoices to the template
     entry_list = []
     for entry in entries:
         entry_data = {
@@ -163,9 +175,7 @@ def employee_dashboard(username):
             'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
-
-    # Return the template with the required data
-    return render_template('employee_dashboard.html', username=username, entries=entry_list, invoices=invoices)
+    return render_template('employee_dashboard.html', username=username, entries=entry_list)
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
@@ -188,6 +198,34 @@ def add_time_entry():
         return redirect(url_for('employee_dashboard', username=username))
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
+
+@app.route('/delete_time_entry', methods=['POST'])
+def delete_time_entry():
+    username = request.form.get('username').strip().lower().replace(" ", "_")
+    date = request.form.get('date')
+    start_time = request.form.get('start_time')
+    end_time = request.form.get('end_time')
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        cursor.execute('''
+            DELETE FROM time_entries 
+            WHERE username = ? AND date = ? AND start_time = ? AND end_time = ?
+        ''', (username, date, start_time, end_time))
+
+        if cursor.rowcount == 0:
+            message = "No matching entry found to delete."
+        else:
+            conn.commit()
+            message = "Entry deleted successfully."
+
+        conn.close()
+        return jsonify({'message': message}), 200
+
+    except sqlite3.Error as e:
+        return jsonify({'error': f"Error during deletion: {e}"}), 500
 
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
@@ -233,22 +271,12 @@ def generate_invoice_route():
         "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
         "Phone": "+61 2 1234 5678"
     }
-
     filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
 
     if filepath is None or not os.path.exists(filepath):
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Save the generated invoice data into the database
-    conn.execute(
-        'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
-        (invoice_number, username, invoice_date, total_hours, total_hours * 25, filepath)
-    )
-    conn.commit()
-        conn.close()
-
-    return send_from_directory(os.path.dirname(filepath), os.path.basename(filepath), as_attachment=True)
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
@@ -258,7 +286,7 @@ def employee_invoices(username):
         (username,)
     ).fetchall()
     conn.close()
-
+    
     invoice_list = []
     for invoice in invoices:
         invoice_list.append({
@@ -268,15 +296,17 @@ def employee_invoices(username):
             'total_payment': invoice['total_payment'],
             'filename': invoice['filename']
         })
-
+    
     return jsonify(invoice_list), 200
+
+from datetime import datetime
+from invoice_generator import generate_invoice  # Ensure this import works as expected
 
 @app.route('/send_invoice_to_db', methods=['POST'])
 def send_invoice_to_db():
     username = request.form.get('username')
     if not username:
         return jsonify({'error': 'Username is required'}), 400
-
     conn = get_db_connection()
 
     # Check for the latest generated invoice for this user
@@ -305,7 +335,6 @@ def download_invoice(filename):
 
     # Serve the file
     return send_from_directory(directory, filename)
-
+    
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-
