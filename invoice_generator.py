@@ -17,8 +17,8 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
     
     # Ensure the target directory exists and has appropriate permissions
     if not os.path.exists(target_directory):
-        os.makedirs(target_directory, mode=0o755)  # Use mode=0o755 for standard permissions
-        logger.info(f"Created directory: {target_directory}")
+        os.makedirs(target_directory)
+        os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
 
     # Define the filename path
     filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
