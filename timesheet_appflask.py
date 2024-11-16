@@ -68,7 +68,6 @@ def home():
     return render_template('index.html')
 
 @app.route('/login', methods=['POST'])
-@app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username').strip().lower().replace(" ", "")
     password = request.form.get('password')
@@ -79,12 +78,13 @@ def login():
     try:
         # Create a connection to the database
         conn = get_db_connection()
-
-        # Log that the connection was successfully created
         app.logger.info("Database connection established.")
 
-        # Query the database for the user
-        user = conn.execute("SELECT username, password, role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ?", (username,)).fetchone()
+        # Query the database for the user, logging the query
+        query = "SELECT username, password, role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ?"
+        app.logger.info(f"Executing query: {query} with username: {username}")
+        
+        user = conn.execute(query, (username,)).fetchone()
 
         # Check if user is found
         if user:
