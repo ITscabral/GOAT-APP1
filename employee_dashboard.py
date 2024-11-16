@@ -117,25 +117,25 @@ class EmployeeDashboard:
         return tree
 
     def generate_invoice(self):
-        """Generate an invoice and display it."""
-        timesheet_data = [
-            (entry[0], entry[1], entry[2], self.calculate_hours(entry[1], entry[2]))
-            for entry in self.db.query(
-                "SELECT date, start_time, end_time FROM time_entries WHERE username = ?",
-                (self.username,)
-            )
-        ]
-        total_hours = sum(entry[3] for entry in timesheet_data)
-        invoice_number = self.db.get_next_invoice_number()
-        filename = generate_invoice(invoice_number, self.username, {}, timesheet_data, total_hours)
-        
-        # Save invoice metadata to database and open the invoice PDF
-        self.db.save_invoice(invoice_number, self.username, total_hours, total_hours * 30, filename)
-        open_invoice(filename)
-        
-        # Update UI after invoice generation
-        self.invoice_generated = True
-        self.send_button.config(state=tk.NORMAL)
+    """Generate an invoice and display it."""
+    timesheet_data = [
+        (entry[0], entry[1], entry[2], self.calculate_hours(entry[1], entry[2]))
+        for entry in self.db.query(
+            "SELECT date, start_time, end_time FROM time_entries WHERE username = ?",
+            (self.username,)
+        )
+    ]
+    total_hours = sum(entry[3] for entry in timesheet_data)
+    invoice_number = self.db.get_next_invoice_number()
+    filename = generate_invoice(invoice_number, self.username, {}, timesheet_data, total_hours)
+    
+    # Save invoice metadata to database and log the operation
+    print(f"Saving invoice: {invoice_number}, {self.username}, {filename}")
+    self.db.save_invoice(invoice_number, self.username, total_hours, total_hours * 30, filename)
+
+    open_invoice(filename)
+    self.invoice_generated = True
+    self.send_button.config(state=tk.NORMAL)
 
     def send_invoice(self):
     """Send the generated invoice and update the database to mark it as sent."""
