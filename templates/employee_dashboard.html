@@ -79,14 +79,14 @@
         <h3>Invoice Actions</h3>
         <div class="d-flex gap-3">
             <!-- Generate Invoice Form -->
-            <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
+            <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST">
                 <input type="hidden" name="username" value="{{ username }}">
                 <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
             </form>
             <!-- Send Invoice Form -->
             <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
                 <input type="hidden" name="username" value="{{ username }}">
-                <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
+                <button type="submit" id="sendInvoiceButton" class="btn btn-secondary" disabled>Send Invoice</button>
             </form>
         </div>
         <div id="feedbackMessage" class="alert mt-3"></div>
@@ -121,6 +121,39 @@
 </div>
 
 <script>
+    document.getElementById("generateInvoiceForm").onsubmit = function(event) {
+        event.preventDefault();
+        const button = event.target.querySelector("button");
+        button.disabled = true;
+        fetch(this.action, {
+            method: 'POST',
+            body: new FormData(this)
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Invoice generation failed');
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = `Invoice_${new Date().toISOString()}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            button.disabled = false;
+            document.getElementById("sendInvoiceButton").disabled = false;
+        })
+        .catch(error => {
+            console.error(error);
+            button.disabled = false;
+            alert("Error generating invoice.");
+        });
+    };
+
     document.getElementById("sendInvoiceForm").onsubmit = function(event) {
         event.preventDefault();
         fetch(this.action, {
