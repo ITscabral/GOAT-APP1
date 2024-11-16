@@ -7,7 +7,6 @@ from tkinter import ttk, messagebox
 from dotenv import load_dotenv
 from twilio.rest import Client
 
-# Load environment variables
 load_dotenv()
 
 # Twilio credentials
