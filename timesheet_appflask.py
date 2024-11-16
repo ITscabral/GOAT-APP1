@@ -160,12 +160,22 @@ def add_employee():
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
+
+    # Fetch time entries
     entries = conn.execute(
         'SELECT * FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?', 
         (username.lower().replace(" ", ""),)
     ).fetchall()
+
+    # Fetch invoices
+    invoices = conn.execute(
+        'SELECT invoice_number, date, total_hours, total_payment, filename FROM invoices WHERE username = ?',
+        (username,)
+    ).fetchall()
+
     conn.close()
 
+    # Pass both time entries and invoices to the template
     entry_list = []
     for entry in entries:
         entry_data = {
@@ -175,7 +185,9 @@ def employee_dashboard(username):
             'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
-    return render_template('employee_dashboard.html', username=username, entries=entry_list)
+
+    # Return the template with the required data
+    return render_template('employee_dashboard.html', username=username, entries=entry_list, invoices=invoices)
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
