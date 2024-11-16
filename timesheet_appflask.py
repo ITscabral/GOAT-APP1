@@ -268,7 +268,7 @@ def generate_invoice_route():
 
     company_info = {
         "Company Name": "GOAT Removals",
-        "Address": "123 Business St, Sydney, Australia",
+        "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
         "Phone": "+61 2 1234 5678"
     }
     filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
@@ -277,20 +277,6 @@ def generate_invoice_route():
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Save invoice to the database
-    try:
-        conn.execute(
-            'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
-            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
-        )
-        conn.commit()
-    except sqlite3.Error as e:
-        conn.close()
-        return jsonify({'error': f'Failed to save invoice data: {str(e)}'}), 500
-    finally:
-        conn.close()
-
-    return send_file(filepath, as_attachment=True)
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
