@@ -6,7 +6,10 @@
     <title>Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <style>
-        body { padding: 2em; background-color: #f9f9f9; }
+        body {
+            padding: 2em;
+            background-color: #f9f9f9;
+        }
         .container {
             max-width: 1200px;
             margin: auto;
@@ -15,20 +18,42 @@
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        table { width: 100%; margin-top: 20px; border-collapse: collapse; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
-        th { background-color: #f4f4f4; }
-        .btn { transition: background-color 0.3s; }
-        .btn-primary:hover { background-color: #0056b3; }
-        .btn-success:hover { background-color: #45a049; }
+        table {
+            width: 100%;
+            margin-top: 20px;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .btn {
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-success:hover {
+            background-color: #45a049;
+        }
 
-        /* Mensagem de feedback */
-        #feedbackMessage { display: none; }
+        /* Feedback message */
+        #feedbackMessage {
+            display: none;
+        }
 
-        /* Responsividade */
+        /* Responsiveness */
         @media (max-width: 768px) {
-            body { padding: 1em; }
-            .container { padding: 15px; }
+            body {
+                padding: 1em;
+            }
+            .container {
+                padding: 15px;
+            }
         }
     </style>
 </head>
