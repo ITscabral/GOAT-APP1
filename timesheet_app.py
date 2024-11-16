@@ -60,7 +60,7 @@ class TimesheetApp:
         print(f"Login attempt with Username: {username} and Password: {password}")
         try:
             user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
-            print("Query result:", user)  # Debugging output
+            print("Query result:", user)
             if user:
                 role = user[0][0]
                 if role == 'admin':
@@ -139,6 +139,7 @@ class TimesheetApp:
 
     def open_employee_dashboard(self, username):
         print("Employee dashboard opened.")  # Replace with EmployeeDashboard(self.root, self.db, username)
+
 
 if __name__ == "__main__":
     root = tk.Tk()
