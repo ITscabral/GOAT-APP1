@@ -5,21 +5,17 @@ import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 
-# Inicializar o app Flask e Bcrypt para segurança
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
 
-# Configurar diretório de faturas
 INVOICE_DIR = "invoices"
 os.makedirs(INVOICE_DIR, exist_ok=True)
 
-# Conexão com banco de dados
 def get_db_connection():
     conn = sqlite3.connect('timesheet.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
-# Inicializar banco de dados
 def initialize_db():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -112,9 +108,10 @@ def add_employee():
 def employee_dashboard(username):
     conn = get_db_connection()
     entries = conn.execute('SELECT * FROM time_entries WHERE username = ?', (username,)).fetchall()
+    invoices = conn.execute('SELECT * FROM invoices WHERE username = ?', (username,)).fetchall()
     conn.close()
 
-    return render_template('employee_dashboard.html', username=username, entries=entries)
+    return render_template('employee_dashboard.html', username=username, entries=entries, invoices=invoices)
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
@@ -139,23 +136,39 @@ def generate_invoice_route():
     username = request.form.get('username')
     conn = get_db_connection()
     entries = conn.execute('SELECT date, total_hours FROM time_entries WHERE username = ?', (username,)).fetchall()
-    conn.close()
 
     invoice_date = datetime.now().strftime("%Y-%m-%d")
     invoice_number = f"{invoice_date.replace('-', '')}_{username}"
     total_hours = sum(entry['total_hours'] for entry in entries)
+    total_payment = total_hours * 25.0  # Example hourly rate
 
     filepath = os.path.join(INVOICE_DIR, f"{invoice_number}.pdf")
     generate_invoice(invoice_number, username, {"Company": "GOAT Removals"}, entries, total_hours, filepath)
 
-    return jsonify({'message': 'Fatura gerada com sucesso!', 'filename': filepath})
+    conn.execute('INSERT OR IGNORE INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+                 (invoice_number, username, invoice_date, total_hours, total_payment, filepath))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'message': 'Invoice generated successfully!', 'filename': filepath})
+
+@app.route('/send_invoice_to_db', methods=['POST'])
+def send_invoice_to_db():
+    username = request.form.get('username')
+    conn = get_db_connection()
+    invoice = conn.execute('SELECT * FROM invoices WHERE username = ? ORDER BY date DESC LIMIT 1', (username,)).fetchone()
+    conn.close()
+
+    if invoice:
+        return jsonify({'message': 'Invoice sent successfully!'})
+    return jsonify({'error': 'No invoice available to send!'}), 400
 
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
     filepath = os.path.join(INVOICE_DIR, filename)
     if os.path.exists(filepath):
         return send_from_directory(INVOICE_DIR, filename)
-    return jsonify({'error': 'Fatura não encontrada'}), 404
+    return jsonify({'error': 'Invoice not found'}), 404
 
 if __name__ == '__main__':
     app.run(debug=True)
