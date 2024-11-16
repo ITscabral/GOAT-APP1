@@ -247,9 +247,11 @@ def generate_invoice_route():
             return jsonify({'error': 'No time entries found for this user'}), 400
 
         invoice_date = datetime.now().strftime("%Y-%m-%d")
-        invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
+        invoice_number = conn.execute(
+            'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
+        ).fetchone()[0]
 
-        # Assuming you have a function to check existing invoices
+        # Check if the invoice for today already exists
         existing_invoice = conn.execute(
             'SELECT * FROM invoices WHERE username = ? AND date = ?',
             (username, invoice_date)
@@ -259,15 +261,15 @@ def generate_invoice_route():
             app.logger.info(f"Invoice already exists for today: {username}")
             return jsonify({'error': 'An invoice for this date already exists'}), 400
 
-        # Assuming you have a function to prepare invoice data
+        # Generate timesheet data
         timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
-            round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+             round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
             for entry in entries
         ]
         total_hours = sum(entry[3] for entry in timesheet_data)
 
-        # Ensure the function to generate an invoice exists and returns the file path
+        # Generate invoice
         filepath = generate_invoice(invoice_number, username, {
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
@@ -277,7 +279,17 @@ def generate_invoice_route():
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Invoice file not found at {filepath}")
 
+        # Save to database
+        conn.execute(
+            """
+            INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+            """,
+            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
+        )
+        conn.commit()
         conn.close()
+
         return send_file(filepath, as_attachment=True)
 
     except Exception as e:
