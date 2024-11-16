@@ -317,22 +317,26 @@ def send_invoice_to_db():
     conn = get_db_connection()
 
     try:
-        # Check for the latest generated invoice for this user
-        existing_invoice = conn.execute(
-            'SELECT * FROM invoices WHERE username = ? ORDER BY date DESC LIMIT 1',
-            (username,)
-        ).fetchone()
+        # Log the fetching process
+        app.logger.debug(f"Fetching the latest invoice for username: {username}")
 
-        if not existing_invoice:
+        # Check for the latest generated invoice for this user
+        query = 'SELECT * FROM invoices WHERE username = ? ORDER BY date DESC LIMIT 1'
+        existing_invoice = conn.execute(query, (username,)).fetchone()
+
+        # Log what is found
+        if existing_invoice:
+            app.logger.debug(f"Found invoice: {existing_invoice['invoice_number']} for {username}")
+        else:
+            app.logger.debug("No invoices found for this username")
             return jsonify({'error': 'No generated invoice found for this user to send.'}), 400
 
-        # Optionally update the invoice status to "sent" if you keep track of that
+        # Optionally update the invoice status to "sent"
         invoice_number = existing_invoice['invoice_number']
-        conn.execute(
-            'UPDATE invoices SET status = ? WHERE invoice_number = ?',
-            ('sent', invoice_number)
-        )
+        conn.execute('UPDATE invoices SET status = ? WHERE invoice_number = ?', ('sent', invoice_number))
         conn.commit()
+
+        app.logger.debug(f"Invoice {invoice_number} marked as sent")
 
         return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
 
