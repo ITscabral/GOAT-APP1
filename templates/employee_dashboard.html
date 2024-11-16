@@ -79,7 +79,7 @@
         <h3>Invoice Actions</h3>
         <div class="d-flex gap-3">
             <!-- Generate Invoice Form -->
-            <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST">
+            <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
                 <input type="hidden" name="username" value="{{ username }}">
                 <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
             </form>
@@ -125,16 +125,12 @@
         event.preventDefault();
         const button = event.target.querySelector("button");
         button.disabled = true;
+
         fetch(this.action, {
             method: 'POST',
             body: new FormData(this)
         })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Invoice generation failed');
-            }
-            return response.blob();
-        })
+        .then(response => response.blob())
         .then(blob => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -144,6 +140,7 @@
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
+
             button.disabled = false;
             document.getElementById("sendInvoiceButton").disabled = false;
         })
@@ -156,6 +153,7 @@
 
     document.getElementById("sendInvoiceForm").onsubmit = function(event) {
         event.preventDefault();
+
         fetch(this.action, {
             method: 'POST',
             body: new FormData(this)
