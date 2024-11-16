@@ -150,7 +150,7 @@ def generate_invoice_route():
     conn.commit()
     conn.close()
 
-    return jsonify({'message': 'Invoice generated successfully!', 'filename': filepath})
+    return send_from_directory(INVOICE_DIR, os.path.basename(filepath), as_attachment=False)
 
 @app.route('/send_invoice_to_db', methods=['POST'])
 def send_invoice_to_db():
