@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory, flash
 from flask_bcrypt import Bcrypt
 import sqlite3
 import os
@@ -8,6 +8,9 @@ from invoice_generator import generate_invoice
 # Initialize Flask app and Bcrypt
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
+
+# Configure the Flask secret key for session management
+app.config['SECRET_KEY'] = 'your_secret_key_here'  # Make sure to replace this with a strong secret key
 
 # Directory for storing generated invoices
 INVOICE_DIR = "invoices"
@@ -78,7 +81,9 @@ def login():
             return redirect(url_for('admin_dashboard'))
         elif user['role'] == 'employee':
             return redirect(url_for('employee_dashboard', username=username))
-    return jsonify({'message': 'Invalid credentials'}), 401
+    else:
+        flash("Invalid credentials. Please try again.", 'danger')
+        return redirect(url_for('home'))
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -103,9 +108,11 @@ def add_employee():
                      (name, hashed_password, role, phone_number))
         conn.commit()
     except sqlite3.IntegrityError:
-        return jsonify({'error': 'User already exists!'}), 400
+        flash("User already exists!", 'danger')
+        return redirect(url_for('admin_dashboard'))
     finally:
         conn.close()
+    flash("User added successfully!", 'success')
     return redirect(url_for('admin_dashboard'))
 
 @app.route('/employee_dashboard/<username>')
@@ -135,13 +142,15 @@ def add_time_entry():
         end_dt = datetime.strptime(end_time, "%H:%M")
         total_hours = (end_dt - start_dt - timedelta(minutes=30)).seconds / 3600.0
     except ValueError:
-        return jsonify({'error': 'Invalid time format'}), 400
+        flash("Invalid time format. Please enter valid start and end times.", 'danger')
+        return redirect(url_for('employee_dashboard', username=username))
 
     conn = get_db_connection()
     conn.execute('INSERT INTO time_entries (username, date, start_time, end_time, total_hours) VALUES (?, ?, ?, ?, ?)', 
                  (username, date, start_time, end_time, total_hours))
     conn.commit()
     conn.close()
+    flash("Time entry added successfully.", 'success')
     return redirect(url_for('employee_dashboard', username=username))
 
 @app.route('/generate_invoice', methods=['POST'])
