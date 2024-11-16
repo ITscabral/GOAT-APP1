@@ -68,31 +68,51 @@ def home():
     return render_template('index.html')
 
 @app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST'])
 def login():
     username = request.form.get('username').strip().lower().replace(" ", "")
     password = request.form.get('password')
 
-    app.logger.info(f"Attempting login with username: {username}")  # Log the incoming username
+    # Log the incoming username and password
+    app.logger.info(f"Attempting login with username: {username}")
 
-    conn = get_db_connection()
     try:
-        user = conn.execute("SELECT username, password, role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ?", (username,)).fetchone()
-        app.logger.info(f"User found: {user}")  # Log the fetched user details
+        # Create a connection to the database
+        conn = get_db_connection()
 
+        # Log that the connection was successfully created
+        app.logger.info("Database connection established.")
+
+        # Query the database for the user
+        user = conn.execute("SELECT username, password, role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ?", (username,)).fetchone()
+
+        # Check if user is found
+        if user:
+            app.logger.info(f"User found: {user['username']} - Role: {user['role']}")
+        else:
+            app.logger.warning(f"User not found: {username}")
+        
         if user and bcrypt.check_password_hash(user['password'], password):
-            app.logger.info(f"Login successful for user: {username}")  # Log successful login
+            # Successful login
+            app.logger.info(f"Login successful for user: {username}")
             if user['role'] == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif user['role'] == 'employee':
                 return redirect(url_for('employee_dashboard', username=username))
-        else:
-            app.logger.warning(f"Invalid credentials for user: {username}")  # Log invalid credentials
-            return jsonify({'message': 'Invalid credentials'}), 401
+        
+        app.logger.warning(f"Invalid credentials for user: {username}")
+        return jsonify({'message': 'Invalid credentials'}), 401
+
     except Exception as e:
-        app.logger.error(f"Error during login: {e}")  # Log any errors that occur
+        # Catch all exceptions, log the error, and return an error message
+        app.logger.error(f"Error during login process: {e}")
         return jsonify({'message': 'Internal Server Error'}), 500
+
     finally:
-        conn.close()
+        # Ensure the database connection is closed
+        if conn:
+            conn.close()
+            app.logger.info("Database connection closed.")
 
 
 @app.route('/admin_dashboard')
