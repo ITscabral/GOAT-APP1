@@ -195,11 +195,11 @@
 
         rows.forEach(row => {
             const rowEmployee = row.getAttribute("data-username");
-            const employeeInTeam = selectedTeam && teamMembers[selectedTeam] && teamMembers[selectedTeam].includes(rowEmployee);
+            const employeeInTeam = selectedTeam && teamMembers[selectedTeam]?.includes(rowEmployee);
 
             const showRow = (
-                (selectedTeam === "" || employeeInTeam) &&
-                (selectedEmployee === "" || rowEmployee === selectedEmployee)
+                (!selectedTeam || employeeInTeam) &&
+                (!selectedEmployee || rowEmployee === selectedEmployee)
             );
 
             row.style.display = showRow ? "" : "none";
