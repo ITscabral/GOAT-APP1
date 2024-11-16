@@ -111,9 +111,15 @@ def add_employee():
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
-    entries = conn.execute('SELECT * FROM time_entries WHERE username = ?', (username,)).fetchall()
-    invoices = conn.execute('SELECT * FROM invoices WHERE username = ?', (username,)).fetchall()
-    conn.close()
+    try:
+        # Fetch time entries and invoices
+        entries = conn.execute('SELECT * FROM time_entries WHERE username = ?', (username,)).fetchall()
+        invoices = conn.execute('SELECT * FROM invoices WHERE username = ?', (username,)).fetchall()
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error: {e}")
+        return "An error occurred while loading the dashboard.", 500
+    finally:
+        conn.close()
 
     return render_template('employee_dashboard.html', username=username, entries=entries, invoices=invoices)
 
