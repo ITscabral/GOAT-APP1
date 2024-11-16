@@ -287,26 +287,16 @@ def generate_invoice_route():
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
     conn = get_db_connection()
-    invoices = conn.execute(
-        'SELECT invoice_number, date, total_hours, total_payment, filename FROM invoices WHERE username = ?',
-        (username,)
-    ).fetchall()
-    conn.close()
-    
-    invoice_list = []
-    for invoice in invoices:
-        invoice_list.append({
-            'invoice_number': invoice['invoice_number'],
-            'date': invoice['date'],
-            'total_hours': invoice['total_hours'],
-            'total_payment': invoice['total_payment'],
-            'filename': invoice['filename']
-        })
-    
-    return jsonify(invoice_list), 200
+    try:
+        query = 'SELECT invoice_number, date, total_hours, total_payment, filename FROM invoices WHERE username = ? ORDER BY date DESC'
+        invoices = conn.execute(query, (username,)).fetchall()
+        invoices_list = [{'invoice_number': invoice['invoice_number'], 'date': invoice['date'], 'total_hours': invoice['total_hours'], 'total_payment': invoice['total_payment'], 'filename': invoice['filename']} for invoice in invoices]
+        return jsonify(invoices_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
-from datetime import datetime
-from invoice_generator import generate_invoice  # Ensure this import works as expected
 
 @app.route('/send_invoice_to_db', methods=['POST'])
 def send_invoice_to_db():
