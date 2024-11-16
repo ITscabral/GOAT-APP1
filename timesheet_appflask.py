@@ -313,22 +313,36 @@ def send_invoice_to_db():
     username = request.form.get('username')
     if not username:
         return jsonify({'error': 'Username is required'}), 400
+    
     conn = get_db_connection()
 
-    # Check for the latest generated invoice for this user
-    existing_invoice = conn.execute(
-        'SELECT * FROM invoices WHERE username = ? ORDER BY date DESC LIMIT 1',
-        (username,)
-    ).fetchone()
+    try:
+        # Check for the latest generated invoice for this user
+        existing_invoice = conn.execute(
+            'SELECT * FROM invoices WHERE username = ? ORDER BY date DESC LIMIT 1',
+            (username,)
+        ).fetchone()
 
-    if not existing_invoice:
+        if not existing_invoice:
+            return jsonify({'error': 'No generated invoice found for this user to send.'}), 400
+
+        # Optionally update the invoice status to "sent" if you keep track of that
+        invoice_number = existing_invoice['invoice_number']
+        conn.execute(
+            'UPDATE invoices SET status = ? WHERE invoice_number = ?',
+            ('sent', invoice_number)
+        )
+        conn.commit()
+
+        return jsonify({'message': f'Invoice {invoice_number} sent successfully to admin dashboard'})
+
+    except Exception as e:
+        app.logger.error(f"Failed to send invoice for {username}: {str(e)}")
+        return jsonify({'error': 'Failed to send invoice due to an internal error'}), 500
+
+    finally:
         conn.close()
-        return jsonify({'error': 'No generated invoice found for this user to send.'}), 400
-
-    # Send the last generated invoice details to the admin dashboard
-    conn.close()
-    return jsonify({'message': f'Invoice {existing_invoice["invoice_number"]} sent successfully to admin dashboard'})
-
+        
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
     # Use the persistent disk path to access the invoice file
