@@ -1,9 +1,9 @@
 # Server Deployment
 gunicorn==23.0.0  # Recommended for Unix-based servers (e.g., most cloud providers)
-# waitress==3.0.1  # Uncomment this line if deploying on Windows servers
 
 # Core Framework and Libraries
 Flask==3.0.3  # Web framework
+flask-bcrypt==1.0.1  # Password hashing for Flask
 twilio==9.3.4  # SMS and communications library
 
 # PDF and UI Components
@@ -12,4 +12,6 @@ tkcalendar==1.6.1  # Date picker widget for Tkinter
 
 # Python Environment
 python-dotenv==1.0.0  # Manage environment variables
-waitress==2.1.2
+
+# WSGI Server for Windows (Optional, comment if using gunicorn on Unix)
+waitress==2.1.2  # Windows-compatible WSGI server
