@@ -10,7 +10,6 @@ class EmployeeDashboard:
         self.db = db
         self.username = username
         self.invoice_generated = False
-        self.invoice_filename = None
         self.show_dashboard()
 
     def show_dashboard(self):
@@ -83,16 +82,13 @@ class EmployeeDashboard:
     def clear_selected_entry(self):
         """Clear the selected entry from the time entries tree view."""
         selected_item = self.entry_tree.selection()
-        if not selected_item:
-            messagebox.showerror("Error", "No entry selected!")
-            return
-
-        entry = self.entry_tree.item(selected_item)['values']
-        self.db.execute(
-            "DELETE FROM time_entries WHERE date = ? AND start_time = ? AND end_time = ?",
-            (entry[0], entry[1], entry[2])
-        )
-        self.entry_tree.delete(selected_item)
+        if selected_item:
+            entry = self.entry_tree.item(selected_item)['values']
+            self.db.execute(
+                "DELETE FROM time_entries WHERE date = ? AND start_time = ? AND end_time = ?",
+                (entry[0], entry[1], entry[2])
+            )
+            self.entry_tree.delete(selected_item)
 
     def refresh_entries(self):
         """Refreshes the time entries displayed in the tree view."""
@@ -122,25 +118,22 @@ class EmployeeDashboard:
 
     def generate_invoice(self):
         """Generate an invoice and display it."""
-        entries = self.db.query(
-            "SELECT date, start_time, end_time FROM time_entries WHERE username = ?",
-            (self.username,)
-        )
-        if not entries:
-            messagebox.showerror("Error", "No time entries to generate an invoice!")
-            return
-
         timesheet_data = [
             (entry[0], entry[1], entry[2], self.calculate_hours(entry[1], entry[2]))
-            for entry in entries
+            for entry in self.db.query(
+                "SELECT date, start_time, end_time FROM time_entries WHERE username = ?",
+                (self.username,)
+            )
         ]
         total_hours = sum(entry[3] for entry in timesheet_data)
         invoice_number = self.db.get_next_invoice_number()
-        self.invoice_filename = generate_invoice(invoice_number, self.username, {}, timesheet_data, total_hours)
+        filename = generate_invoice(invoice_number, self.username, {}, timesheet_data, total_hours)
         
-        self.db.save_invoice(invoice_number, self.username, total_hours, total_hours * 30, self.invoice_filename)
-        open_invoice(self.invoice_filename)
+        # Save invoice metadata to database and open the invoice PDF
+        self.db.save_invoice(invoice_number, self.username, total_hours, total_hours * 30, filename)
+        open_invoice(filename)
         
+        # Update UI after invoice generation
         self.invoice_generated = True
         self.send_button.config(state=tk.NORMAL)
 
