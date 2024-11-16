@@ -138,10 +138,18 @@ class EmployeeDashboard:
         self.send_button.config(state=tk.NORMAL)
 
     def send_invoice(self):
-        """Send the generated invoice."""
-        if self.invoice_generated:
-            messagebox.showinfo("Invoice Sent", "Invoice sent successfully!")
+    """Send the generated invoice and update the database to mark it as sent."""
+    if self.invoice_generated:
+        # Assuming you have a method to retrieve the latest generated invoice for the user
+        invoice = self.db.get_latest_invoice(self.username)
+        if invoice:
+            self.db.mark_invoice_as_sent(invoice['invoice_number'])
+            messagebox.showinfo("Invoice Sent", f"Invoice {invoice['invoice_number']} sent successfully!")
+            self.refresh_invoices()  # Refresh the list of invoices
             self.invoice_generated = False
             self.send_button.config(state=tk.DISABLED)
         else:
-            messagebox.showerror("Error", "Please generate an invoice before sending.")
+            messagebox.showerror("Error", "No invoice available to send.")
+    else:
+        messagebox.showerror("Error", "Please generate an invoice before sending.")
+
