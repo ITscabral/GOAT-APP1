@@ -4,6 +4,7 @@ from tkcalendar import DateEntry
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice, open_invoice
 
+
 class EmployeeDashboard:
     def __init__(self, root, db, username):
         self.root = root
