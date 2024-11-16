@@ -124,16 +124,21 @@
                 </tr>
             </thead>
             <tbody id="invoiceTableBody">
-                {% for invoice in invoices %}
-                <tr>
-                    <td>{{ invoice.invoice_number }}</td>
-                    <td>{{ invoice.date }}</td>
-                    <td>{{ invoice.total_hours }}</td>
-                    <td>{{ invoice.total_payment }}</td>
-                    <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-link">Open PDF</a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
+    {% for invoice in invoices %}
+    <tr>
+        <td>{{ invoice.invoice_number }}</td>
+        <td>{{ invoice.date }}</td>
+        <td>{{ invoice.total_hours }}</td>
+        <td>{{ invoice.total_payment }}</td>
+        <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-link">Open PDF</a></td>
+    </tr>
+    {% else %}
+    <tr>
+        <td colspan="5">No invoices found.</td>
+    </tr>
+    {% endfor %}
+</tbody>
+
         </table>
     </div>
 
