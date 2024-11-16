@@ -109,32 +109,32 @@
     </div>
 
     <!-- Invoice History Section -->
-<div id="invoiceHistory" class="mt-5">
-    <h3>Your Invoices</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Invoice Number</th>
-                <th>Date</th>
-                <th>Total Hours</th>
-                <th>Total Payment</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="invoiceTableBody">
-            {% for invoice in invoices %}
-            <tr>
-                <td>{{ invoice.invoice_number }}</td>
-                <td>{{ invoice.date }}</td>
-                <td>{{ invoice.total_hours }}</td>
-                <td>{{ invoice.total_payment }}</td>
-                <!-- Link to open the PDF, placed inside a <td> cell and with filename passed correctly -->
-                <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}">Open PDF</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <div id="invoiceHistory" class="mt-5">
+        <h3>Your Invoices</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Invoice Number</th>
+                    <th>Date</th>
+                    <th>Total Hours</th>
+                    <th>Total Payment</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="invoiceTableBody">
+                {% for invoice in invoices %}
+                <tr>
+                    <td>{{ invoice.invoice_number }}</td>
+                    <td>{{ invoice.date }}</td>
+                    <td>{{ invoice.total_hours }}</td>
+                    <td>{{ invoice.total_payment }}</td>
+                    <!-- Link to open the PDF, placed inside a <td> cell and with filename passed correctly -->
+                    <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}">Open PDF</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <script>
         function formatTimeTo12Hour(time24) {
