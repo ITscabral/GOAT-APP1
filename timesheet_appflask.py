@@ -5,21 +5,26 @@ import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 
+# Initialize Flask app and Bcrypt
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
 
+# Directory for storing generated invoices
 INVOICE_DIR = "invoices"
 os.makedirs(INVOICE_DIR, exist_ok=True)
 
+# Database connection
 def get_db_connection():
     conn = sqlite3.connect('timesheet.db', check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
+# Initialize database
 def initialize_db():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    # Create necessary tables
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
@@ -73,8 +78,7 @@ def login():
             return redirect(url_for('admin_dashboard'))
         elif user['role'] == 'employee':
             return redirect(url_for('employee_dashboard', username=username))
-    else:
-        return jsonify({'message': 'Credenciais inválidas'}), 401
+    return jsonify({'message': 'Invalid credentials'}), 401
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -99,7 +103,7 @@ def add_employee():
                      (name, hashed_password, role, phone_number))
         conn.commit()
     except sqlite3.IntegrityError:
-        return jsonify({'error': 'Usuário já existe!'}), 400
+        return jsonify({'error': 'User already exists!'}), 400
     finally:
         conn.close()
     return redirect(url_for('admin_dashboard'))
@@ -120,9 +124,12 @@ def add_time_entry():
     start_time = request.form.get('start_time')
     end_time = request.form.get('end_time')
 
-    start_dt = datetime.strptime(start_time, "%H:%M")
-    end_dt = datetime.strptime(end_time, "%H:%M")
-    total_hours = (end_dt - start_dt - timedelta(minutes=30)).seconds / 3600.0
+    try:
+        start_dt = datetime.strptime(start_time, "%H:%M")
+        end_dt = datetime.strptime(end_time, "%H:%M")
+        total_hours = (end_dt - start_dt - timedelta(minutes=30)).seconds / 3600.0
+    except ValueError:
+        return jsonify({'error': 'Invalid time format'}), 400
 
     conn = get_db_connection()
     conn.execute('INSERT INTO time_entries (username, date, start_time, end_time, total_hours) VALUES (?, ?, ?, ?, ?)', 
@@ -136,17 +143,18 @@ def generate_invoice_route():
     username = request.form.get('username')
     conn = get_db_connection()
     entries = conn.execute('SELECT date, total_hours FROM time_entries WHERE username = ?', (username,)).fetchall()
-    total_hours = sum(entry['total_hours'] for entry in entries)
-    total_payment = total_hours * 25.0  # Example hourly rate
+    if not entries:
+        return jsonify({'error': 'No time entries found for this user.'}), 404
 
+    total_hours = sum(entry['total_hours'] for entry in entries)
     invoice_date = datetime.now().strftime("%Y-%m-%d")
     invoice_number = f"{invoice_date.replace('-', '')}_{username}"
     filepath = os.path.join(INVOICE_DIR, f"{invoice_number}.pdf")
 
-    generate_invoice(invoice_number, username, {"Company": "GOAT Removals"}, entries, total_hours, filepath)
+    generate_invoice(invoice_number, username, {"Company Name": "GOAT Removals"}, entries, total_hours, filepath)
 
     conn.execute('INSERT OR IGNORE INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
-                 (invoice_number, username, invoice_date, total_hours, total_payment, filepath))
+                 (invoice_number, username, invoice_date, total_hours, total_hours * 25, filepath))
     conn.commit()
     conn.close()
 
