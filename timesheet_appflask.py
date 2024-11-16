@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
 
+
 app = Flask(__name__)
 
 # Initialize the database and create tables if they don't exist
@@ -247,13 +248,13 @@ def generate_invoice_route():
     invoice_date = datetime.now().strftime("%Y-%m-%d")
     invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
     
-    # Check if an invoice was already generated today for this user
+        # Check if an invoice was already generated today for this user
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ?',
         (username, invoice_date)
     ).fetchone()
 
-        if existing_invoice:
+    if existing_invoice:
         conn.close()
         return jsonify({'error': 'An invoice for this date already exists'}), 400
 
@@ -270,13 +271,14 @@ def generate_invoice_route():
         "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
         "Phone": "+61 2 1234 5678"
     }
+
     filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
 
     if filepath is None or not os.path.exists(filepath):
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
-    # Insert the generated invoice into the database
+    # Save the generated invoice data into the database
     conn.execute(
         'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
         (invoice_number, username, invoice_date, total_hours, total_hours * 25, filepath)
@@ -304,7 +306,7 @@ def employee_invoices(username):
             'total_payment': invoice['total_payment'],
             'filename': invoice['filename']
         })
-    
+
     return jsonify(invoice_list), 200
 
 @app.route('/send_invoice_to_db', methods=['POST'])
@@ -312,6 +314,7 @@ def send_invoice_to_db():
     username = request.form.get('username')
     if not username:
         return jsonify({'error': 'Username is required'}), 400
+
     conn = get_db_connection()
 
     # Check for the latest generated invoice for this user
