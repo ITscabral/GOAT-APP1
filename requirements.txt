@@ -1,17 +1,16 @@
-# Server Deployment
-gunicorn==23.0.0  # Recommended for Unix-based servers (e.g., most cloud providers)
+gunicorn==23.0.0  # Use this for Unix-based servers (e.g., most cloud providers)
+waitress==3.0.1  # Use this for Windows-based servers (uncomment if using Waitress instead of Gunicorn)
 
-# Core Framework and Libraries
-Flask==3.0.3  # Web framework
-flask-bcrypt==1.0.1  # Password hashing for Flask
-twilio==9.3.4  # SMS and communications library
+# Flask and Twilio
+Flask~=3.0.3
+twilio~=9.3.4
 
-# PDF and UI Components
-reportlab==4.2.5  # PDF generation
-tkcalendar==1.6.1  # Date picker widget for Tkinter
+# Additional Libraries
+reportlab~=4.2.5
+tkcalendar~=1.6.1
 
-# Python Environment
-python-dotenv==1.0.0  # Manage environment variables
-
-# WSGI Server for Windows (Optional, comment if using gunicorn on Unix)
-waitress==2.1.2  # Windows-compatible WSGI server
+# Optional (uncomment only if you actively use these in your application)
+# pygame==2.5.2
+# trampoline==0.1.2
+# tbb==2021.13.0
+# packaging==24.1
