@@ -97,53 +97,45 @@
         <!-- Generate Invoice Form -->
         <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
             <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
+            <button type="submit" class="btn btn-primary">Generate & View Invoice</button>
         </form>
         <!-- Send Invoice Form -->
         <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
+            <button type="submit" class="btn btn-secondary">Send Invoice</button>
         </form>
         <!-- Feedback Message -->
         <div id="feedbackMessage" class="alert mt-3"></div>
     </div>
 
     <!-- Invoice History Section -->
-<div id="invoiceHistory" class="mt-5">
-    <h3>Your Invoices</h3>
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Invoice Number</th>
-                <th>Date</th>
-                <th>Total Hours</th>
-                <th>Total Payment</th>
-                <th>Action</th>
-            </tr>
-        </thead>
-        <tbody id="invoiceTableBody">
-            {% for invoice in invoices %}
-            <tr>
-                <td>{{ invoice.invoice_number }}</td>
-                <td>{{ invoice.date }}</td>
-                <td>{{ invoice.total_hours }}</td>
-                <td>{{ invoice.total_payment }}</td>
-                <!-- Link to open the PDF, placed inside a <td> cell and with filename passed correctly -->
-                <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}">Open PDF</a></td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+    <div id="invoiceHistory" class="mt-5">
+        <h3>Your Invoices</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Invoice Number</th>
+                    <th>Date</th>
+                    <th>Total Hours</th>
+                    <th>Total Payment</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="invoiceTableBody">
+                {% for invoice in invoices %}
+                <tr>
+                    <td>{{ invoice.invoice_number }}</td>
+                    <td>{{ invoice.date }}</td>
+                    <td>{{ invoice.total_hours }}</td>
+                    <td>{{ invoice.total_payment }}</td>
+                    <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" target="_blank">Open PDF</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     <script>
-        function formatTimeTo12Hour(time24) {
-            const [hours, minutes] = time24.split(':');
-            const amPm = +hours >= 12 ? 'PM' : 'AM';
-            const hours12 = ((+hours + 11) % 12 + 1);
-            return ${hours12}:${minutes} ${amPm};
-        }
-
         document.addEventListener("DOMContentLoaded", function() {
             document.querySelectorAll('.time-display').forEach(function(td) {
                 td.textContent = formatTimeTo12Hour(td.textContent);
@@ -151,6 +143,7 @@
         });
 
         document.getElementById("generateInvoiceForm").onsubmit = function(event) {
+            event.preventDefault();
             fetch(this.action, {
                 method: 'POST',
                 body: new FormData(this)
@@ -166,7 +159,7 @@
                 const a = document.createElement('a');
                 a.style.display = 'none';
                 a.href = url;
-                a.download = Invoice_${new Date().toISOString()}.pdf;
+                a.download = 'Invoice_' + new Date().toISOString().split('T')[0] + '.pdf';
                 document.body.appendChild(a);
                 a.click();
                 window.URL.revokeObjectURL(url);
@@ -175,7 +168,6 @@
                 console.error('Error generating invoice:', error);
                 alert("Error generating invoice.");
             });
-            event.preventDefault();
         };
 
         document.getElementById("sendInvoiceForm").onsubmit = function(event) {
@@ -202,34 +194,13 @@
             });
         };
 
-        document.addEventListener("DOMContentLoaded", function() {
-            fetchInvoices();
-            function fetchInvoices() {
-                fetch(/employee_invoices/{{ username }})
-                    .then(response => response.json())
-                    .then(invoices => {
-                        const invoiceTableBody = document.getElementById('invoiceTableBody');
-                        invoiceTableBody.innerHTML = '';
-                        invoices.forEach(invoice => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = 
-                                <td>${invoice.invoice_number}</td>
-                                <td>${invoice.date}</td>
-                                <td>${invoice.total_hours}</td>
-                                <td>${invoice.total_payment}</td>
-                                <a href="{{ url_for('download_invoice', filename=invoice_filename) }}">Open PDF</a>
-                            ;
-                            invoiceTableBody.appendChild(row);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error loading invoices:', error);
-                        alert("Error loading invoices.");
-                    });
-            }
-        });
+        function formatTimeTo12Hour(time24) {
+            const [hours, minutes] = time24.split(':');
+            const amPm = +hours >= 12 ? 'PM' : 'AM';
+            const hours12 = ((+hours + 11) % 12 + 1);
+            return `${hours12}:${minutes} ${amPm}`;
+        }
     </script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
