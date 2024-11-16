@@ -7,11 +7,19 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <style>
         body {
-            padding: 2em;
+            padding: 1em;
+            background-color: #f9f9f9;
         }
         .container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        h1, h3 {
+            color: #333;
         }
         .form-group {
             margin-bottom: 15px;
@@ -19,14 +27,49 @@
         table {
             width: 100%;
             margin-top: 20px;
+            border-collapse: collapse;
         }
         th, td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
+        th {
+            background-color: #f4f4f4;
+        }
+        .btn {
+            transition: background-color 0.3s;
+        }
+        .btn-success:hover {
+            background-color: #45a049;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+        .btn-secondary:hover {
+            background-color: #6c757d;
+        }
         #feedbackMessage {
             display: none;
+        }
+
+        /* Responsiveness */
+        @media (max-width: 768px) {
+            body {
+                padding: 0.5em;
+            }
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
+            table {
+                font-size: 0.9rem;
+            }
+            .btn {
+                font-size: 0.9rem;
+            }
         }
     </style>
 </head>
@@ -36,7 +79,7 @@
     <h3>Welcome, {{ username }}</h3>
 
     <!-- Time Entry Form -->
-    <div id="timeEntryForm" class="mt-5">
+    <div id="timeEntryForm" class="mt-4">
         <h3>Enter Your Work Time</h3>
         <form action="{{ url_for('add_time_entry') }}" method="POST">
             <input type="hidden" name="username" value="{{ username }}">
@@ -52,7 +95,7 @@
                 <label for="end_time">End Time:</label>
                 <input type="time" id="end_time" name="end_time" class="form-control" required>
             </div>
-            <button type="submit" class="btn btn-success">Add Time Entry</button>
+            <button type="submit" class="btn btn-success w-100">Add Time Entry</button>
         </form>
     </div>
 
@@ -94,16 +137,18 @@
     <!-- Invoice Actions -->
     <div id="invoiceActions" class="mt-5">
         <h3>Invoice Actions</h3>
-        <!-- Generate Invoice Form -->
-        <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
-            <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
-        </form>
-        <!-- Send Invoice Form -->
-        <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
-            <input type="hidden" name="username" value="{{ username }}">
-            <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
-        </form>
+        <div class="d-flex gap-3">
+            <!-- Generate Invoice Form -->
+            <form id="generateInvoiceForm" action="{{ url_for('generate_invoice_route') }}" method="POST" target="_blank">
+                <input type="hidden" name="username" value="{{ username }}">
+                <button type="submit" id="generateInvoiceButton" class="btn btn-primary">Generate & View Invoice</button>
+            </form>
+            <!-- Send Invoice Form -->
+            <form id="sendInvoiceForm" action="{{ url_for('send_invoice_to_db') }}" method="POST">
+                <input type="hidden" name="username" value="{{ username }}">
+                <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
+            </form>
+        </div>
         <!-- Feedback Message -->
         <div id="feedbackMessage" class="alert mt-3"></div>
     </div>
@@ -128,108 +173,14 @@
                     <td>{{ invoice.date }}</td>
                     <td>{{ invoice.total_hours }}</td>
                     <td>{{ invoice.total_payment }}</td>
-                    <!-- Link to open the PDF, placed inside a <td> cell and with filename passed correctly -->
-                    <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}">Open PDF</a></td>
+                    <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-link">Open PDF</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
 
-    <script>
-        function formatTimeTo12Hour(time24) {
-            const [hours, minutes] = time24.split(':');
-            const amPm = +hours >= 12 ? 'PM' : 'AM';
-            const hours12 = ((+hours + 11) % 12 + 1);
-            return `${hours12}:${minutes} ${amPm}`;
-        }
-
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll('.time-display').forEach(function(td) {
-                td.textContent = formatTimeTo12Hour(td.textContent);
-            });
-        });
-
-        document.getElementById("generateInvoiceForm").onsubmit = function(event) {
-            fetch(this.action, {
-                method: 'POST',
-                body: new FormData(this)
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Network response was not ok ' + response.statusText);
-                }
-                return response.blob();
-            })
-            .then(blob => {
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = `Invoice_${new Date().toISOString()}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-            })
-            .catch(error => {
-                console.error('Error generating invoice:', error);
-                alert("Error generating invoice.");
-            });
-            event.preventDefault();
-        };
-
-        document.getElementById("sendInvoiceForm").onsubmit = function(event) {
-            event.preventDefault();
-            fetch(this.action, {
-                method: 'POST',
-                body: new FormData(this)
-            })
-            .then(response => response.json())
-            .then(data => {
-                const feedbackMessage = document.getElementById('feedbackMessage');
-                if (data.error) {
-                    feedbackMessage.className = "alert alert-danger";
-                    feedbackMessage.textContent = data.error;
-                } else {
-                    feedbackMessage.className = "alert alert-success";
-                    feedbackMessage.textContent = data.message;
-                }
-                feedbackMessage.style.display = "block";
-            })
-            .catch(error => {
-                console.error('Error sending invoice:', error);
-                alert("Error sending invoice.");
-            });
-        };
-
-        document.addEventListener("DOMContentLoaded", function() {
-            fetchInvoices();
-            function fetchInvoices() {
-                fetch(`/employee_invoices/{{ username }}`)
-                    .then(response => response.json())
-                    .then(invoices => {
-                        const invoiceTableBody = document.getElementById('invoiceTableBody');
-                        invoiceTableBody.innerHTML = '';
-                        invoices.forEach(invoice => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                                <td>${invoice.invoice_number}</td>
-                                <td>${invoice.date}</td>
-                                <td>${invoice.total_hours}</td>
-                                <td>${invoice.total_payment}</td>
-                                <a href="{{ url_for('download_invoice', filename=invoice_filename) }}">Open PDF</a>
-                            `;
-                            invoiceTableBody.appendChild(row);
-                        });
-                    })
-                    .catch(error => {
-                        console.error('Error loading invoices:', error);
-                        alert("Error loading invoices.");
-                    });
-            }
-        });
-    </script>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
