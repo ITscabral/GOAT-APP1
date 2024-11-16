@@ -313,29 +313,26 @@ def send_invoice_to_db():
     username = request.form.get('username')
     if not username:
         return jsonify({'error': 'Username is required'}), 400
-    
+
     conn = get_db_connection()
     try:
-        # Log the attempt to fetch the invoice
-        app.logger.debug(f"Attempting to fetch the latest invoice for username: {username}")
+        # Fetch the latest invoice for this user that hasn't been sent yet
+        query = 'SELECT * FROM invoices WHERE username = ? AND sent = 0 ORDER BY date DESC LIMIT 1'
+        invoice = conn.execute(query, (username,)).fetchone()
 
-        query = 'SELECT * FROM invoices WHERE username = ? ORDER BY date DESC LIMIT 1'
-        existing_invoice = conn.execute(query, (username,)).fetchone()
-
-        # Log what is found
-        if not existing_invoice:
-            app.logger.debug("No invoices found for this username")
+        if not invoice:
             conn.close()
             return jsonify({'error': 'No generated invoice found for this user to send.'}), 400
 
-        app.logger.debug(f"Found invoice: {existing_invoice['invoice_number']} for {username}")
-        # Additional code to process and send the invoice...
-        conn.close()
-        return jsonify({'message': f'Invoice {existing_invoice["invoice_number"]} sent successfully to admin dashboard'})
+        # Update invoice as sent
+        update_query = 'UPDATE invoices SET sent = 1 WHERE invoice_number = ?'
+        conn.execute(update_query, (invoice['invoice_number'],))
+        conn.commit()
+
+        return jsonify({'message': f'Invoice {invoice["invoice_number"]} sent successfully.'})
 
     except Exception as e:
-        app.logger.error(f"Failed to send invoice for {username}: {str(e)}")
-        return jsonify({'error': 'Failed to send invoice due to an internal error'}), 500
+        return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
         
