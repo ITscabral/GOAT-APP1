@@ -21,9 +21,6 @@
         h1, h3 {
             color: #333;
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
         table {
             width: 100%;
             margin-top: 20px;
@@ -40,35 +37,13 @@
         .btn {
             transition: background-color 0.3s;
         }
-        .btn-success:hover {
-            background-color: #45a049;
-        }
-        .btn-primary:hover {
-            background-color: #0056b3;
-        }
-        .btn-secondary:hover {
-            background-color: #6c757d;
-        }
         #feedbackMessage {
             display: none;
         }
 
-        /* Responsiveness */
         @media (max-width: 768px) {
-            body {
-                padding: 0.5em;
-            }
             .container {
                 padding: 15px;
-            }
-            h1 {
-                font-size: 1.5rem;
-            }
-            table {
-                font-size: 0.9rem;
-            }
-            .btn {
-                font-size: 0.9rem;
             }
         }
     </style>
@@ -99,41 +74,6 @@
         </form>
     </div>
 
-    <!-- Time Entries Table -->
-    <div id="timeEntriesSection" class="mt-5">
-        <h3>Your Time Entries</h3>
-        <table class="table table-striped">
-            <thead>
-            <tr>
-                <th>Date</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th>Total Hours</th>
-                <th>Action</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for entry in entries %}
-            <tr>
-                <td>{{ entry['date'] }}</td>
-                <td class="time-display">{{ entry['start_time'] }}</td>
-                <td class="time-display">{{ entry['end_time'] }}</td>
-                <td>{{ entry['total_hours'] }}</td>
-                <td>
-                    <form action="{{ url_for('delete_time_entry') }}" method="POST" style="display:inline;">
-                        <input type="hidden" name="username" value="{{ username }}">
-                        <input type="hidden" name="date" value="{{ entry['date'] }}">
-                        <input type="hidden" name="start_time" value="{{ entry['start_time'] }}">
-                        <input type="hidden" name="end_time" value="{{ entry['end_time'] }}">
-                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
     <!-- Invoice Actions -->
     <div id="invoiceActions" class="mt-5">
         <h3>Invoice Actions</h3>
@@ -149,7 +89,6 @@
                 <button type="submit" id="sendInvoiceButton" class="btn btn-secondary">Send Invoice</button>
             </form>
         </div>
-        <!-- Feedback Message -->
         <div id="feedbackMessage" class="alert mt-3"></div>
     </div>
 
@@ -158,13 +97,13 @@
         <h3>Your Invoices</h3>
         <table class="table table-striped">
             <thead>
-                <tr>
-                    <th>Invoice Number</th>
-                    <th>Date</th>
-                    <th>Total Hours</th>
-                    <th>Total Payment</th>
-                    <th>Action</th>
-                </tr>
+            <tr>
+                <th>Invoice Number</th>
+                <th>Date</th>
+                <th>Total Hours</th>
+                <th>Total Payment</th>
+                <th>Action</th>
+            </tr>
             </thead>
             <tbody id="invoiceTableBody">
                 {% for invoice in invoices %}
@@ -180,6 +119,32 @@
         </table>
     </div>
 </div>
+
+<script>
+    document.getElementById("sendInvoiceForm").onsubmit = function(event) {
+        event.preventDefault();
+        fetch(this.action, {
+            method: 'POST',
+            body: new FormData(this)
+        })
+        .then(response => response.json())
+        .then(data => {
+            const feedbackMessage = document.getElementById('feedbackMessage');
+            if (data.error) {
+                feedbackMessage.className = "alert alert-danger";
+                feedbackMessage.textContent = data.error;
+            } else {
+                feedbackMessage.className = "alert alert-success";
+                feedbackMessage.textContent = data.message;
+            }
+            feedbackMessage.style.display = "block";
+        })
+        .catch(error => {
+            console.error('Error sending invoice:', error);
+            alert("Error sending invoice.");
+        });
+    };
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 </body>
