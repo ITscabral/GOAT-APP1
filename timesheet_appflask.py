@@ -303,28 +303,35 @@ def send_invoice_to_db():
     username = request.form.get('username')
     if not username:
         return jsonify({'error': 'Username is required'}), 400
-
+    
     conn = get_db_connection()
+    
     try:
-        # Fetch the latest invoice for this user that hasn't been sent yet
-        query = 'SELECT * FROM invoices WHERE username = ? AND sent = 0 ORDER BY date DESC LIMIT 1'
-        invoice = conn.execute(query, (username,)).fetchone()
+        # Retrieve the most recent invoice for the user where 'sent' is 0
+        existing_invoice = conn.execute(
+            'SELECT * FROM invoices WHERE username = ? AND sent = 0 ORDER BY date DESC LIMIT 1',
+            (username,)
+        ).fetchone()
 
-        if not invoice:
+        if not existing_invoice:
             conn.close()
             return jsonify({'error': 'No generated invoice found for this user to send.'}), 400
 
-        # Update invoice as sent
-        update_query = 'UPDATE invoices SET sent = 1 WHERE invoice_number = ?'
-        conn.execute(update_query, (invoice['invoice_number'],))
+        # Update the 'sent' column to 1 for this invoice
+        conn.execute(
+            'UPDATE invoices SET sent = 1 WHERE invoice_number = ?',
+            (existing_invoice['invoice_number'],)
+        )
         conn.commit()
 
-        return jsonify({'message': f'Invoice {invoice["invoice_number"]} sent successfully.'})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    finally:
+        # Confirm success
         conn.close()
+        return jsonify({'message': f"Invoice {existing_invoice['invoice_number']} sent successfully!"}), 200
+
+    except sqlite3.Error as e:
+        conn.close()
+        return jsonify({'error': f"Database error: {e}"}), 500
+
         
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
