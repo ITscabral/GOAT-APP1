@@ -10,7 +10,7 @@ app = Flask(__name__)
 bcrypt = Bcrypt(app)
 
 # Configure the Flask secret key for session management
-app.config['SECRET_KEY'] = 'your_secret_key_here'  # Make sure to replace this with a strong secret key
+app.config['SECRET_KEY'] = 'cabral13'  # Make sure to replace this with a strong secret key
 
 # Directory for storing generated invoices
 INVOICE_DIR = "invoices"
