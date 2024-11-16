@@ -229,54 +229,60 @@ def delete_time_entry():
 
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
-    username = request.form.get('username')
+    username = request.form.get('username').strip().lower().replace(" ", "")
 
     if not username:
+        app.logger.error("Username is required for generating an invoice")
         return jsonify({'error': 'Username is required'}), 400
 
-    conn = get_db_connection()
-    entries = conn.execute(
-        'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
-        (username,)
-    ).fetchall()
+    try:
+        conn = get_db_connection()
+        entries = conn.execute(
+            'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
+            (username,)
+        ).fetchall()
 
-    if not entries:
+        if not entries:
+            app.logger.info(f"No time entries found for user {username}")
+            return jsonify({'error': 'No time entries found for this user'}), 400
+
+        invoice_date = datetime.now().strftime("%Y-%m-%d")
+        invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
+
+        # Assuming you have a function to check existing invoices
+        existing_invoice = conn.execute(
+            'SELECT * FROM invoices WHERE username = ? AND date = ?',
+            (username, invoice_date)
+        ).fetchone()
+
+        if existing_invoice:
+            app.logger.info(f"Invoice already exists for today: {username}")
+            return jsonify({'error': 'An invoice for this date already exists'}), 400
+
+        # Assuming you have a function to prepare invoice data
+        timesheet_data = [
+            (entry['date'], entry['start_time'], entry['end_time'],
+            round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+            for entry in entries
+        ]
+        total_hours = sum(entry[3] for entry in timesheet_data)
+
+        # Ensure the function to generate an invoice exists and returns the file path
+        filepath = generate_invoice(invoice_number, username, {
+            "Company Name": "GOAT Removals",
+            "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
+            "Phone": "+61 2 1234 5678"
+        }, timesheet_data, total_hours)
+
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Invoice file not found at {filepath}")
+
         conn.close()
-        return jsonify({'error': 'No time entries found for this user'}), 400
+        return send_file(filepath, as_attachment=True)
 
-    # Fetch the most recent invoice
-    invoice_date = datetime.now().strftime("%Y-%m-%d")
-    invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
-    
-    # Check if an invoice was already generated today for this user
-    existing_invoice = conn.execute(
-        'SELECT * FROM invoices WHERE username = ? AND date = ?',
-        (username, invoice_date)
-    ).fetchone()
-
-    if existing_invoice:
-        conn.close()
-        return jsonify({'error': 'An invoice for this date already exists'}), 400
-
-    # If no duplicate, create a new invoice
-    timesheet_data = [
-        (entry['date'], entry['start_time'], entry['end_time'],
-         round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
-        for entry in entries
-    ]
-    total_hours = sum(entry[3] for entry in timesheet_data)
-
-    company_info = {
-        "Company Name": "GOAT Removals",
-        "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
-        "Phone": "+61 2 1234 5678"
-    }
-    filepath = generate_invoice(invoice_number, username, company_info, timesheet_data, total_hours)
-
-    if filepath is None or not os.path.exists(filepath):
-        conn.close()
-        return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
-
+    except Exception as e:
+        app.logger.error(f"Failed to generate invoice for {username}: {str(e)}")
+        return jsonify({'error': 'Failed to generate invoice'}), 500
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
