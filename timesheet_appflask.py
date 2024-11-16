@@ -136,13 +136,13 @@ def generate_invoice_route():
     username = request.form.get('username')
     conn = get_db_connection()
     entries = conn.execute('SELECT date, total_hours FROM time_entries WHERE username = ?', (username,)).fetchall()
-
-    invoice_date = datetime.now().strftime("%Y-%m-%d")
-    invoice_number = f"{invoice_date.replace('-', '')}_{username}"
     total_hours = sum(entry['total_hours'] for entry in entries)
     total_payment = total_hours * 25.0  # Example hourly rate
 
+    invoice_date = datetime.now().strftime("%Y-%m-%d")
+    invoice_number = f"{invoice_date.replace('-', '')}_{username}"
     filepath = os.path.join(INVOICE_DIR, f"{invoice_number}.pdf")
+
     generate_invoice(invoice_number, username, {"Company": "GOAT Removals"}, entries, total_hours, filepath)
 
     conn.execute('INSERT OR IGNORE INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
