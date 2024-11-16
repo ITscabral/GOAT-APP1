@@ -114,7 +114,6 @@ def login():
             conn.close()
             app.logger.info("Database connection closed.")
 
-
 @app.route('/admin_dashboard')
 def admin_dashboard():
     conn = get_db_connection()
