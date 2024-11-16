@@ -1,6 +1,5 @@
 import sqlite3
 import os
-from datetime import datetime
 
 class Database:
     def __init__(self, db_path="timesheet.db"):
@@ -59,19 +58,3 @@ class Database:
             print("Invoice saved successfully.")
         except sqlite3.Error as e:
             print(f"Error saving invoice: {e}")
-
-    def get_invoices_for_user(self, username):
-        """Retrieve all invoices for a specific user."""
-        try:
-            print(f"Fetching invoices for user: {username}")
-            result = self.query("SELECT * FROM invoices WHERE username = ?", (username,))
-            return result
-        except sqlite3.Error as e:
-            print(f"Error fetching invoices: {e}")
-            return []
-
-    def close(self):
-        """Close the database connection."""
-        if self.connection:
-            self.connection.close()
-            print("Database connection closed.")
