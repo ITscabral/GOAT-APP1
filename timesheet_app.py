@@ -1,147 +1,161 @@
-import os
-import tkinter as tk
-from tkinter import messagebox
-import uuid
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_from_directory
+from flask_bcrypt import Bcrypt
 import sqlite3
-from dotenv import load_dotenv
-from twilio.rest import Client
+import os
+from datetime import datetime, timedelta
+from invoice_generator import generate_invoice
 
-class Database:
-    def __init__(self, db_path="C:\\Users\\Lucas Cabral\\PycharmProjects\\Python Mini Curso\\GOAT APP\\timesheet.db"):
-        if not os.path.exists(db_path):
-            print(f"Database file '{db_path}' not found.")
-            raise FileNotFoundError("The specified database file does not exist.")
-        try:
-            self.connection = sqlite3.connect(db_path)
-            self.cursor = self.connection.cursor()
-            print("Connected to SQLite database successfully.")
-        except sqlite3.Error as e:
-            print(f"Database connection error: {e}")
+# Inicializar o app Flask e Bcrypt para segurança
+app = Flask(__name__)
+bcrypt = Bcrypt(app)
 
-    def query(self, sql, params=()):
-        try:
-            self.cursor.execute(sql, params)
-            return self.cursor.fetchall()
-        except sqlite3.Error as e:
-            print(f"SQL Query Error: {e}")
-            return []
+# Configurar diretório de faturas
+INVOICE_DIR = "invoices"
+os.makedirs(INVOICE_DIR, exist_ok=True)
 
-    def execute(self, sql, params=()):
-        try:
-            self.cursor.execute(sql, params)
-            self.connection.commit()
-        except sqlite3.Error as e:
-            print(f"SQL Execution Error: {e}")
+# Conexão com banco de dados
+def get_db_connection():
+    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
 
-class TimesheetApp:
-    def __init__(self, root):
-        print("Initializing TimesheetApp...")
-        self.db = Database()
-        self.root = root
-        self.root.title("GOAT Removals - Login")
-        self.login_window()
+# Inicializar banco de dados
+def initialize_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-    def login_window(self):
-        self.clear_window()
-        self.create_form("Username", row=0)
-        self.create_form("Password", row=1, show='*')
-        tk.Button(self.root, text="Login", command=self.login).grid(row=2, columnspan=2, pady=10)
-        tk.Button(self.root, text="Forgot Password?", command=self.reset_password_window).grid(row=3, columnspan=2, pady=10)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS users (
+            username TEXT PRIMARY KEY,
+            password TEXT NOT NULL,
+            role TEXT NOT NULL,
+            phone_number TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS time_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT,
+            date TEXT,
+            start_time TEXT,
+            end_time TEXT,
+            total_hours REAL,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS invoices (
+            invoice_number TEXT PRIMARY KEY,
+            username TEXT,
+            date TEXT,
+            total_hours REAL,
+            total_payment REAL,
+            filename TEXT,
+            FOREIGN KEY (username) REFERENCES users (username)
+        )
+    ''')
+    conn.commit()
+    conn.close()
 
-    def create_form(self, label, row, show=None):
-        tk.Label(self.root, text=f"{label}:").grid(row=row, column=0, padx=5, pady=5)
-        entry = tk.Entry(self.root, show=show)
-        entry.grid(row=row, column=1, padx=5, pady=5)
-        setattr(self, f"{label.lower()}_entry", entry)
+initialize_db()
 
-    def login(self):
-        username = self.username_entry.get()
-        password = self.password_entry.get()
-        print(f"Login attempt with Username: {username} and Password: {password}")
-        try:
-            user = self.db.query("SELECT role FROM users WHERE LOWER(username) = ? AND password = ?", (username.lower(), password))
-            print("Query result:", user)
-            if user:
-                role = user[0][0]
-                if role == 'admin':
-                    self.open_admin_dashboard()
-                elif role == 'employee':
-                    self.open_employee_dashboard(username)
-            else:
-                print("Invalid credentials")
-                messagebox.showerror("Login Failed", "Invalid credentials!")
-        except sqlite3.Error as e:
-            print(f"Exception during login: {e}")
-            messagebox.showerror("Error", "An error occurred during login.")
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-    def clear_window(self):
-        for widget in self.root.winfo_children():
-            widget.destroy()
+@app.route('/login', methods=['POST'])
+def login():
+    username = request.form.get('username').strip().lower().replace(" ", "")
+    password = request.form.get('password')
 
-    def reset_password_window(self):
-        self.clear_window()
-        tk.Label(self.root, text="Reset Password", font=("Arial", 16)).grid(row=0, columnspan=2, pady=10)
-        self.create_form("Username", row=1)
-        tk.Button(self.root, text="Send Reset Token", command=self.send_reset_token).grid(row=2, columnspan=2, pady=10)
+    conn = get_db_connection()
+    user = conn.execute("SELECT username, password, role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ?", (username,)).fetchone()
+    conn.close()
 
-    def send_reset_token(self):
-        username = self.username_entry.get()
-        user = self.db.query("SELECT phone_number FROM users WHERE LOWER(username) = ?", (username.lower(),))
-        if user and user[0][0]:
-            phone_number = str(user[0][0]).strip()
-            if phone_number.startswith('0'):
-                phone_number = f"+61{phone_number[1:]}"
-            elif not phone_number.startswith('+'):
-                phone_number = f"+{phone_number}"
-            token = uuid.uuid4().hex[:8]
-            self.db.execute("UPDATE users SET reset_token = ? WHERE LOWER(username) = ?", (token, username.lower()))
-            self.send_sms(phone_number, f"Your password reset token is: {token}")
-            messagebox.showinfo("Success", "Reset token sent via SMS.")
-            self.password_change_window()
-        else:
-            messagebox.showerror("Error", "User not found or phone number missing.")
+    if user and bcrypt.check_password_hash(user['password'], password):
+        if user['role'] == 'admin':
+            return redirect(url_for('admin_dashboard'))
+        elif user['role'] == 'employee':
+            return redirect(url_for('employee_dashboard', username=username))
+    else:
+        return jsonify({'message': 'Credenciais inválidas'}), 401
 
-    def password_change_window(self):
-        self.clear_window()
-        tk.Label(self.root, text="Enter Reset Token", font=("Arial", 16)).grid(row=0, columnspan=2, pady=10)
-        self.create_form("Reset Token", row=1)
-        self.create_form("New Password", row=2, show='*')
-        tk.Button(self.root, text="Change Password", command=self.change_password).grid(row=3, columnspan=2, pady=10)
+@app.route('/admin_dashboard')
+def admin_dashboard():
+    conn = get_db_connection()
+    employees = conn.execute('SELECT * FROM users WHERE role = "employee"').fetchall()
+    time_entries = conn.execute('SELECT * FROM time_entries').fetchall()
+    invoices = conn.execute('SELECT * FROM invoices').fetchall()
+    conn.close()
 
-    def change_password(self):
-        token = self.reset_token_entry.get()
-        new_password = self.new_password_entry.get()
-        user = self.db.query("SELECT username FROM users WHERE reset_token = ?", (token,))
-        if user:
-            self.db.execute("UPDATE users SET password = ?, reset_token = NULL WHERE reset_token = ?", (new_password, token))
-            messagebox.showinfo("Success", "Password changed successfully!")
-            self.login_window()
-        else:
-            messagebox.showerror("Error", "Invalid reset token!")
+    return render_template('admin_dashboard.html', employees=employees, time_entries=time_entries, invoices=invoices)
 
-    def send_sms(self, to_number, message):
-        load_dotenv()
-        TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
-        TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
-        TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
-        if not TWILIO_ACCOUNT_SID or not TWILIO_AUTH_TOKEN or not TWILIO_PHONE_NUMBER:
-            messagebox.showerror("SMS Error", "Twilio credentials are not properly set in the environment variables.")
-            return
-        try:
-            client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
-            sms = client.messages.create(body=message, from_=TWILIO_PHONE_NUMBER, to=to_number)
-            print(f"SMS sent successfully. SID: {sms.sid}")
-        except Exception as e:
-            messagebox.showerror("SMS Error", f"Failed to send SMS: {e}")
+@app.route('/add_employee', methods=['POST'])
+def add_employee():
+    name = request.form.get('name').strip().title()
+    role = request.form.get('role')
+    phone_number = request.form.get('phone_number')
+    hashed_password = bcrypt.generate_password_hash('123').decode('utf-8')
 
-    def open_admin_dashboard(self):
-        print("Admin dashboard opened.")  # Replace with AdminDashboard(self.root, self.db)
+    conn = get_db_connection()
+    try:
+        conn.execute('INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)', 
+                     (name, hashed_password, role, phone_number))
+        conn.commit()
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Usuário já existe!'}), 400
+    finally:
+        conn.close()
+    return redirect(url_for('admin_dashboard'))
 
-    def open_employee_dashboard(self, username):
-        print("Employee dashboard opened.")  # Replace with EmployeeDashboard(self.root, self.db, username)
+@app.route('/employee_dashboard/<username>')
+def employee_dashboard(username):
+    conn = get_db_connection()
+    entries = conn.execute('SELECT * FROM time_entries WHERE username = ?', (username,)).fetchall()
+    conn.close()
 
+    return render_template('employee_dashboard.html', username=username, entries=entries)
 
-if __name__ == "__main__":
-    root = tk.Tk()
-    app = TimesheetApp(root)
-    root.mainloop()
+@app.route('/add_time_entry', methods=['POST'])
+def add_time_entry():
+    username = request.form.get('username')
+    date = request.form.get('date')
+    start_time = request.form.get('start_time')
+    end_time = request.form.get('end_time')
+
+    start_dt = datetime.strptime(start_time, "%H:%M")
+    end_dt = datetime.strptime(end_time, "%H:%M")
+    total_hours = (end_dt - start_dt - timedelta(minutes=30)).seconds / 3600.0
+
+    conn = get_db_connection()
+    conn.execute('INSERT INTO time_entries (username, date, start_time, end_time, total_hours) VALUES (?, ?, ?, ?, ?)', 
+                 (username, date, start_time, end_time, total_hours))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('employee_dashboard', username=username))
+
+@app.route('/generate_invoice', methods=['POST'])
+def generate_invoice_route():
+    username = request.form.get('username')
+    conn = get_db_connection()
+    entries = conn.execute('SELECT date, total_hours FROM time_entries WHERE username = ?', (username,)).fetchall()
+    conn.close()
+
+    invoice_date = datetime.now().strftime("%Y-%m-%d")
+    invoice_number = f"{invoice_date.replace('-', '')}_{username}"
+    total_hours = sum(entry['total_hours'] for entry in entries)
+
+    filepath = os.path.join(INVOICE_DIR, f"{invoice_number}.pdf")
+    generate_invoice(invoice_number, username, {"Company": "GOAT Removals"}, entries, total_hours, filepath)
+
+    return jsonify({'message': 'Fatura gerada com sucesso!', 'filename': filepath})
+
+@app.route('/download_invoice/<filename>')
+def download_invoice(filename):
+    filepath = os.path.join(INVOICE_DIR, filename)
+    if os.path.exists(filepath):
+        return send_from_directory(INVOICE_DIR, filename)
+    return jsonify({'error': 'Fatura não encontrada'}), 404
+
+if __name__ == '__main__':
+    app.run(debug=True)
