@@ -1,10 +1,9 @@
- from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directory, abort
+from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directory, abort
 import sqlite3
 import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
-
 
 app = Flask(__name__)
 
@@ -254,7 +253,7 @@ def generate_invoice_route():
         (username, invoice_date)
     ).fetchone()
 
-    if existing_invoice:
+        if existing_invoice:
         conn.close()
         return jsonify({'error': 'An invoice for this date already exists'}), 400
 
@@ -277,6 +276,15 @@ def generate_invoice_route():
         conn.close()
         return jsonify({'error': 'Failed to generate invoice or file not found'}), 500
 
+    # Insert the generated invoice into the database
+    conn.execute(
+        'INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename) VALUES (?, ?, ?, ?, ?, ?)',
+        (invoice_number, username, invoice_date, total_hours, total_hours * 25, filepath)
+    )
+    conn.commit()
+    conn.close()
+
+    return send_from_directory(os.path.dirname(filepath), os.path.basename(filepath), as_attachment=True)
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
@@ -286,7 +294,7 @@ def employee_invoices(username):
         (username,)
     ).fetchall()
     conn.close()
-    
+
     invoice_list = []
     for invoice in invoices:
         invoice_list.append({
@@ -298,9 +306,6 @@ def employee_invoices(username):
         })
     
     return jsonify(invoice_list), 200
-
-from datetime import datetime
-from invoice_generator import generate_invoice  # Ensure this import works as expected
 
 @app.route('/send_invoice_to_db', methods=['POST'])
 def send_invoice_to_db():
@@ -335,6 +340,6 @@ def download_invoice(filename):
 
     # Serve the file
     return send_from_directory(directory, filename)
-    
+
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000
+    app.run(debug=True, host='0.0.0.0', port=5000)
