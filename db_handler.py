@@ -50,12 +50,18 @@ class Database:
         return result[0]['next_id']
 
     def save_invoice(self, invoice_number, username, total_hours, total_payment, filename):
-        sql = """
-            INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """
-        self.execute(sql, (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_payment, filename))
+    """Save the invoice details to the invoices table."""
+    try:
+        print(f"Saving invoice {invoice_number} for user {username}")
+        self.execute(
+            "INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_payment, filename, 0)
+        )
         print("Invoice saved successfully.")
+    except sqlite3.Error as e:
+        print(f"Error saving invoice: {e}")
+
 
     def mark_invoice_as_sent(self, invoice_number):
         sql = "UPDATE invoices SET sent = 1 WHERE invoice_number = ?"
