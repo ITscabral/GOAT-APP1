@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
 
-
 app = Flask(__name__)
 
 # Initialize the database and create tables if they don't exist
@@ -136,27 +135,6 @@ def admin_dashboard():
 
     return render_template('admin_dashboard.html', teams=teams.keys(), employees=employee_list, entries=entry_list, invoices=invoice_list)
 
-@app.route('/add_employee', methods=['POST'])
-def add_employee():
-    name = request.form.get('name')
-    role = request.form.get('role')
-    phone_number = request.form.get('phone_number')
-
-    if not all([name, role, phone_number]):
-        return jsonify({'error': 'All fields are required!'}), 400
-
-    try:
-        conn = get_db_connection()
-        conn.execute(
-            'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
-            (name.lower().replace(" ", "_"), '123', role, phone_number)
-        )
-        conn.commit()
-        conn.close()
-        return redirect(url_for('admin_dashboard'))
-    except sqlite3.IntegrityError:
-        return jsonify({'error': 'User already exists!'}), 400
-
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
@@ -211,34 +189,6 @@ def add_time_entry():
     except sqlite3.Error as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/delete_time_entry', methods=['POST'])
-def delete_time_entry():
-    username = request.form.get('username').strip().lower().replace(" ", "_")
-    date = request.form.get('date')
-    start_time = request.form.get('start_time')
-    end_time = request.form.get('end_time')
-
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            DELETE FROM time_entries 
-            WHERE username = ? AND date = ? AND start_time = ? AND end_time = ?
-        ''', (username, date, start_time, end_time))
-
-        if cursor.rowcount == 0:
-            message = "No matching entry found to delete."
-        else:
-            conn.commit()
-            message = "Entry deleted successfully."
-
-        conn.close()
-        return jsonify({'message': message}), 200
-
-    except sqlite3.Error as e:
-        return jsonify({'error': f"Error during deletion: {e}"}), 500
-
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username')
@@ -260,7 +210,7 @@ def generate_invoice_route():
     invoice_date = datetime.now().strftime("%Y-%m-%d")
     invoice_number = f"{invoice_date.replace('-', '')}_{username}_{datetime.now().strftime('%H%M%S')}"
     
-        # Check if an invoice was already generated today for this user
+    # Check if an invoice was already generated today for this user
     existing_invoice = conn.execute(
         'SELECT * FROM invoices WHERE username = ? AND date = ?',
         (username, invoice_date)
@@ -296,7 +246,7 @@ def generate_invoice_route():
         (invoice_number, username, invoice_date, total_hours, total_hours * 25, filepath)
     )
     conn.commit()
-    conn.close()
+        conn.close()
 
     return send_from_directory(os.path.dirname(filepath), os.path.basename(filepath), as_attachment=True)
 
@@ -358,3 +308,4 @@ def download_invoice(filename):
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+
