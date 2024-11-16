@@ -28,7 +28,7 @@ def initialize_db():
     cursor = conn.cursor()
 
     # Create necessary tables
-    cursor.execute('''
+    cursor.execute(''' 
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
             password TEXT NOT NULL,
@@ -47,7 +47,7 @@ def initialize_db():
             FOREIGN KEY (username) REFERENCES users (username)
         )
     ''')
-    cursor.execute('''
+    cursor.execute(''' 
         CREATE TABLE IF NOT EXISTS invoices (
             invoice_number TEXT PRIMARY KEY,
             username TEXT,
