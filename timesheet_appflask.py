@@ -10,7 +10,7 @@ app = Flask(__name__)
 bcrypt = Bcrypt(app)
 
 # Configure the Flask secret key for session management
-app.config['SECRET_KEY'] = 'cabral13'  # Make sure to replace this with a strong secret key
+app.config['SECRET_KEY'] = 'cabral13'  # Use a strong secret key in production
 
 # Directory for storing generated invoices
 INVOICE_DIR = "invoices"
@@ -92,6 +92,7 @@ def login():
         else:
             app.logger.warning(f"User not found: {username}")
         
+        # Verify password with bcrypt
         if user and bcrypt.check_password_hash(user['password'], password):
             # Successful login
             app.logger.info(f"Login successful for user: {username}")
@@ -129,6 +130,7 @@ def add_employee():
     name = request.form.get('name').strip().title()
     role = request.form.get('role')
     phone_number = request.form.get('phone_number')
+    # Hash the password properly
     hashed_password = bcrypt.generate_password_hash('123').decode('utf-8')
 
     conn = get_db_connection()
