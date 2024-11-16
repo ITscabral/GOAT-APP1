@@ -12,3 +12,4 @@ tkcalendar==1.6.1  # Date picker widget for Tkinter
 
 # Python Environment
 python-dotenv==1.0.0  # Manage environment variables
+waitress==2.1.2
