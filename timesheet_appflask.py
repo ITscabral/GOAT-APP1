@@ -385,23 +385,24 @@ def send_invoice_to_db():
 def download_invoice(filename):
     try:
         # Define the directory where invoices are stored
-        directory = os.path.join(os.getcwd(), "invoices")
+        directory = "/tmp/invoices"
+        file_path = os.path.join(directory, filename)
 
         # Log the directory and file name for debugging
         app.logger.info(f"Looking for file in directory: {directory}")
         app.logger.info(f"Requested file: {filename}")
 
-        # Check if the file exists in the directory
-        file_path = os.path.join(directory, filename)
+        # Check if the file exists
         if not os.path.exists(file_path):
             app.logger.error(f"File not found: {file_path}")
             return "File not found", 404
 
-        # Serve the file for download
+        # Serve the file
         return send_from_directory(directory, filename, as_attachment=False)
     except Exception as e:
         app.logger.error(f"Error serving the invoice: {str(e)}")
         return f"An error occurred while serving the invoice: {str(e)}", 500
+
 
     
 if __name__ == '__main__':
