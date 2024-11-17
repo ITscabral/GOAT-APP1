@@ -296,24 +296,28 @@ def generate_invoice_route():
         ]
         total_hours = sum(entry[3] for entry in timesheet_data)
 
-        # Ensure the directory for invoices exists
-        invoice_dir = os.path.join(os.getcwd(), "invoices")
-        os.makedirs(invoice_dir, exist_ok=True)  # Create directory if it doesn't exist
+        # Use a temp directory to store invoices
+        invoice_dir = os.path.join("/tmp", "invoices")
+        os.makedirs(invoice_dir, exist_ok=True)
+        app.logger.info(f"Invoice directory: {invoice_dir}")
 
         # Generate invoice file path
         filename = f"Invoice_{invoice_number}.pdf"
         filepath = os.path.join(invoice_dir, filename)
 
         # Generate the invoice
+        app.logger.info(f"Generating invoice at: {filepath}")
         generate_invoice(invoice_number, username, {
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
             "Phone": "+61 2 1234 5678"
         }, timesheet_data, total_hours)
+        app.logger.info(f"Invoice generated at: {filepath}")
 
         # Check if the file was created
         if not os.path.exists(filepath):
-            raise FileNotFoundError(f"Invoice file not found at {filepath}")
+            app.logger.error(f"Invoice file not found: {filepath}")
+            return jsonify({"error": f"Invoice file not found at {filepath}"}), 500
 
         # Save the invoice to the database
         conn.execute(
