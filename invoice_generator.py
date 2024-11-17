@@ -12,19 +12,20 @@ logger = logging.getLogger(__name__)
 
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
-    # Set the target directory to the persistent disk path on Render
-    target_directory = "/var/data/invoices"
-    
-    # Ensure the target directory exists and has appropriate permissions
-    if not os.path.exists(target_directory):
-        os.makedirs(target_directory)
-        os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
-
-    # Define the filename path
-    filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
-    logger.info(f"Attempting to create invoice file at: {filename}")
-
     try:
+        # Set the target directory to the persistent disk path on Render
+        target_directory = "/var/data/invoices"
+
+        # Ensure the target directory exists and has appropriate permissions
+        if not os.path.exists(target_directory):
+            os.makedirs(target_directory, exist_ok=True)
+            os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+            logger.info(f"Created invoice directory at {target_directory}")
+
+        # Define the filename path
+        filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
+        logger.info(f"Attempting to create invoice file at: {filename}")
+
         # Create PDF canvas
         c = canvas.Canvas(filename, pagesize=A4)
 
@@ -52,7 +53,14 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.drawString(30, 670, f"Date Generated: {date_generated}")
 
         # Add timesheet details
-        y = 640
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(30, 650, "Date")
+        c.drawString(150, 650, "Start Time")
+        c.drawString(250, 650, "End Time")
+        c.drawString(350, 650, "Hours Worked")
+        c.line(30, 645, 500, 645)
+
+        y = 630
         for entry in timesheet_data:
             date, start, end, hours = entry
             weekday = datetime.strptime(date, "%Y-%m-%d").strftime('%A')
@@ -62,6 +70,9 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
             c.drawString(250, y, end)
             c.drawString(350, y, f"{hours:.2f}")
             y -= 20
+            if y < 100:  # Start a new page if needed
+                c.showPage()
+                y = 750
 
         # Add summary of hours and payment
         total_payment = total_hours * hourly_rate
@@ -75,11 +86,16 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.setFillColor(colors.grey)
         c.drawString(30, 50, "Thank you for your work! If you have any questions, contact our office.")
         c.save()
-        
+
         logger.info(f"PDF successfully saved at {filename}")
 
         # Check if the file was saved successfully
-        return filename if os.path.exists(filename) else None
+        if os.path.exists(filename):
+            logger.info(f"Invoice successfully created: {filename}")
+            return filename
+        else:
+            logger.error("Failed to save the invoice file.")
+            return None
 
     except Exception as e:
         logger.error(f"Invoice generation failed: {e}")
