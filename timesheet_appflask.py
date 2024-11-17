@@ -33,15 +33,15 @@ def initialize_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS invoices (
             invoice_number INTEGER PRIMARY KEY,
-            username TEXT,
-            date TEXT,
-            total_hours REAL,
-            total_payment REAL,
-            filename TEXT,
+            username TEXT NOT NULL,
+            date TEXT NOT NULL,
+            total_hours REAL NOT NULL,
+            total_payment REAL NOT NULL,
+            filename TEXT NOT NULL,
+            sent INTEGER DEFAULT 0,
             FOREIGN KEY (username) REFERENCES users (username)
         )
     ''')
-
     conn.commit()
     conn.close()
 
