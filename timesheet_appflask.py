@@ -278,47 +278,32 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Directory for storing invoices
-        invoice_dir = "/tmp/invoices"
-        os.makedirs(invoice_dir, exist_ok=True)
-        app.logger.info(f"Invoice directory ready: {invoice_dir}")
-
-        # Filepath for the invoice
-        filepath = os.path.join(invoice_dir, f"Invoice_{invoice_number}.pdf")
-
-        # Generate the invoice
-        app.logger.info(f"Generating invoice at: {filepath}")
-        result = generate_invoice(invoice_number, username, {
-            "Company Name": "GOAT Removals",
-            "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
-            "Phone": "+61 2 1234 5678"
-        }, [
+        # Process timesheet data
+        timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
             for entry in entries
-        ], sum(
-            round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
-            for entry in entries
-        ))
+        ]
+        total_hours = sum(entry[3] for entry in timesheet_data)
 
-        # Ensure the file exists
-        if not result:
+        # Generate invoice
+        filepath = generate_invoice(invoice_number, username, {
+            "Company Name": "GOAT Removals",
+            "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
+            "Phone": "+61 2 1234 5678"
+        }, timesheet_data, total_hours)
+
+        if not filepath or not os.path.exists(filepath):
             app.logger.error(f"Invoice generation failed. File not found: {filepath}")
             return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
 
-        # Save to database
+        # Save invoice details in the database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
             VALUES (?, ?, ?, ?, ?, ?, 0)
             """,
-            (invoice_number, username, invoice_date, sum(
-                round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
-                for entry in entries
-            ), sum(
-                round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
-                for entry in entries
-            ) * 30, f"Invoice_{invoice_number}.pdf")
+            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
         )
         conn.commit()
 
@@ -331,6 +316,7 @@ def generate_invoice_route():
 
     finally:
         conn.close()
+
 
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
@@ -396,13 +382,13 @@ def download_invoice(filename):
         # Check if the file exists
         if not os.path.exists(file_path):
             app.logger.error(f"File not found: {file_path}")
-            return "File not found", 404
+            return jsonify({"error": "File not found"}), 404
 
         # Serve the file
         return send_from_directory(directory, filename, as_attachment=False)
     except Exception as e:
         app.logger.error(f"Error serving the invoice: {str(e)}")
-        return f"An error occurred while serving the invoice: {str(e)}", 500
+        return jsonify({"error": f"Error serving the invoice: {str(e)}"}), 500
 
 
     
