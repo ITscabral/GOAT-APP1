@@ -261,7 +261,7 @@ def generate_invoice_route():
 
     try:
         conn = get_db_connection()
-
+        
         # Fetch time entries for the user
         entries = conn.execute(
             'SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
@@ -280,14 +280,15 @@ def generate_invoice_route():
 
         # Directory for storing invoices
         invoice_dir = "/tmp/invoices"
-        os.makedirs(invoice_dir, exist_ok=True)  # Ensure directory exists
+        os.makedirs(invoice_dir, exist_ok=True)
+        app.logger.info(f"Invoice directory ready: {invoice_dir}")
 
         # Filepath for the invoice
         filepath = os.path.join(invoice_dir, f"Invoice_{invoice_number}.pdf")
 
         # Generate the invoice
         app.logger.info(f"Generating invoice at: {filepath}")
-        generate_invoice(invoice_number, username, {
+        result = generate_invoice(invoice_number, username, {
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
             "Phone": "+61 2 1234 5678"
@@ -300,9 +301,9 @@ def generate_invoice_route():
             for entry in entries
         ))
 
-        # Check if the file exists
-        if not os.path.exists(filepath):
-            app.logger.error(f"Invoice file not found after generation: {filepath}")
+        # Ensure the file exists
+        if not result:
+            app.logger.error(f"Invoice generation failed. File not found: {filepath}")
             return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
 
         # Save to database
