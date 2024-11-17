@@ -13,22 +13,26 @@ logger = logging.getLogger(__name__)
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
     try:
-        # Set the target directory to the persistent disk path
+        # Set the target directory for storing invoices
         target_directory = "/tmp/invoices"
 
-        # Ensure the target directory exists and has appropriate permissions
-        os.makedirs(target_directory, exist_ok=True)
-        os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
-        logger.info(f"Verified invoice directory: {target_directory}")
+        # Ensure the target directory exists
+        try:
+            os.makedirs(target_directory, exist_ok=True)
+            os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+            logger.info(f"Verified invoice directory: {target_directory}")
+        except Exception as dir_error:
+            logger.error(f"Failed to create or set permissions for directory '{target_directory}': {dir_error}")
+            return None
 
-        # Define the filename path
+        # Define the full file path for the invoice
         filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
         logger.info(f"Attempting to create invoice file at: {filename}")
 
-        # Create PDF canvas
+        # Create the PDF
         c = canvas.Canvas(filename, pagesize=A4)
 
-        # Optional: Insert a logo if it exists
+        # Optional: Add a company logo if it exists
         logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "company_logo.png")
         if os.path.exists(logo_path):
             c.drawImage(logo_path, 30, 770, width=120, height=80)
@@ -51,7 +55,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.setFont("Helvetica", 10)
         c.drawString(30, 670, f"Date Generated: {date_generated}")
 
-        # Add timesheet details
+        # Add timesheet details header
         c.setFont("Helvetica-Bold", 10)
         c.drawString(30, 650, "Date")
         c.drawString(150, 650, "Start Time")
@@ -59,6 +63,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.drawString(350, 650, "Hours Worked")
         c.line(30, 645, 500, 645)
 
+        # Populate timesheet data
         y = 630
         for entry in timesheet_data:
             date, start, end, hours = entry
@@ -69,7 +74,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
             c.drawString(250, y, end)
             c.drawString(350, y, f"{hours:.2f}")
             y -= 20
-            if y < 100:  # Start a new page if needed
+            if y < 100:  # Start a new page if content exceeds the page limit
                 c.showPage()
                 y = 750
 
@@ -80,15 +85,13 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         c.drawString(30, y - 50, f"Hourly Rate: ${hourly_rate:.2f}")
         c.drawString(30, y - 70, f"Total Payment: ${total_payment:.2f}")
 
-        # Footer message
+        # Add footer message
         c.setFont("Helvetica", 8)
         c.setFillColor(colors.grey)
         c.drawString(30, 50, "Thank you for your work! If you have any questions, contact our office.")
         c.save()
 
-        logger.info(f"PDF successfully saved at {filename}")
-
-        # Check if the file was saved successfully
+        # Confirm file creation
         if os.path.exists(filename):
             logger.info(f"Invoice successfully created: {filename}")
             return filename
