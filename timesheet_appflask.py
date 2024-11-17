@@ -160,12 +160,21 @@ def add_employee():
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
     conn = get_db_connection()
+    # Fetch time entries for the logged-in employee
     entries = conn.execute(
-        'SELECT * FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?', 
+        'SELECT * FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
+        (username.lower().replace(" ", ""),)
+    ).fetchall()
+    
+    # Fetch invoices for the logged-in employee
+    invoices = conn.execute(
+        'SELECT invoice_number, date, total_hours, total_payment, filename, sent '
+        'FROM invoices WHERE LOWER(REPLACE(username, " ", "")) = ? ORDER BY date DESC',
         (username.lower().replace(" ", ""),)
     ).fetchall()
     conn.close()
 
+    # Prepare time entries for rendering
     entry_list = []
     for entry in entries:
         entry_data = {
@@ -175,7 +184,22 @@ def employee_dashboard(username):
             'total_hours': round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
         }
         entry_list.append(entry_data)
-    return render_template('employee_dashboard.html', username=username, entries=entry_list)
+    
+    # Prepare invoices for rendering
+    invoice_list = []
+    for invoice in invoices:
+        invoice_data = {
+            'invoice_number': invoice['invoice_number'],
+            'date': invoice['date'],
+            'total_hours': invoice['total_hours'],
+            'total_payment': invoice['total_payment'],
+            'filename': invoice['filename'],
+            'sent': invoice['sent']
+        }
+        invoice_list.append(invoice_data)
+
+    return render_template('employee_dashboard.html', username=username, entries=entry_list, invoices=invoice_list)
+
 
 @app.route('/add_time_entry', methods=['POST'])
 def add_time_entry():
