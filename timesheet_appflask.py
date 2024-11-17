@@ -377,16 +377,16 @@ def send_invoice_to_db():
         
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
-    # Use the persistent disk path to access the invoice file
-    directory = "/var/data/invoices"
+    # Define the directory where invoices are stored
+    directory = os.path.join(os.getcwd(), "invoices")
+    
+    # Check if the file exists in the directory
     file_path = os.path.join(directory, filename)
-
-    # Check if file exists
     if not os.path.exists(file_path):
         return "File not found", 404
 
-    # Serve the file
-    return send_from_directory(directory, filename)
+    # Serve the file for download
+    return send_from_directory(directory, filename, as_attachment=False)
     
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
