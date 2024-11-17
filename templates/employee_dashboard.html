@@ -128,7 +128,9 @@
                 <td>{{ invoice.date }}</td>
                 <td>{{ invoice.total_hours }}</td>
                 <td>${{ invoice.total_payment }}</td>
-                <td><a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-link" target="_blank">Open PDF</a></td>
+                <td>
+                    <a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-link" target="_blank">Open PDF</a>
+                </td>
             </tr>
             {% endfor %}
             </tbody>
