@@ -296,13 +296,22 @@ def generate_invoice_route():
         ]
         total_hours = sum(entry[3] for entry in timesheet_data)
 
-        # Generate invoice file
-        filepath = generate_invoice(invoice_number, username, {
+        # Ensure the directory for invoices exists
+        invoice_dir = os.path.join(os.getcwd(), "invoices")
+        os.makedirs(invoice_dir, exist_ok=True)  # Create directory if it doesn't exist
+
+        # Generate invoice file path
+        filename = f"Invoice_{invoice_number}.pdf"
+        filepath = os.path.join(invoice_dir, filename)
+
+        # Generate the invoice
+        generate_invoice(invoice_number, username, {
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
             "Phone": "+61 2 1234 5678"
         }, timesheet_data, total_hours)
 
+        # Check if the file was created
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Invoice file not found at {filepath}")
 
@@ -312,7 +321,7 @@ def generate_invoice_route():
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
             VALUES (?, ?, ?, ?, ?, ?, 0)
             """,
-            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
+            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filename)
         )
         conn.commit()
 
@@ -377,16 +386,26 @@ def send_invoice_to_db():
         
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
-    # Define the directory where invoices are stored
-    directory = os.path.join(os.getcwd(), "invoices")
-    
-    # Check if the file exists in the directory
-    file_path = os.path.join(directory, filename)
-    if not os.path.exists(file_path):
-        return "File not found", 404
+    try:
+        # Define the directory where invoices are stored
+        directory = os.path.join(os.getcwd(), "invoices")
 
-    # Serve the file for download
-    return send_from_directory(directory, filename, as_attachment=False)
+        # Log the directory and file name for debugging
+        app.logger.info(f"Looking for file in directory: {directory}")
+        app.logger.info(f"Requested file: {filename}")
+
+        # Check if the file exists in the directory
+        file_path = os.path.join(directory, filename)
+        if not os.path.exists(file_path):
+            app.logger.error(f"File not found: {file_path}")
+            return "File not found", 404
+
+        # Serve the file for download
+        return send_from_directory(directory, filename, as_attachment=False)
+    except Exception as e:
+        app.logger.error(f"Error serving the invoice: {str(e)}")
+        return f"An error occurred while serving the invoice: {str(e)}", 500
+
     
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
