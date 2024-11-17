@@ -13,14 +13,13 @@ logger = logging.getLogger(__name__)
 def generate_invoice(invoice_number, employee_name, company_info, timesheet_data, total_hours, hourly_rate=30.0):
     """Generate a professional PDF invoice."""
     try:
-        # Set the target directory to the persistent disk path on Render
-        target_directory = "/var/data/invoices"
+        # Set the target directory to the persistent disk path
+        target_directory = "/tmp/invoices"
 
         # Ensure the target directory exists and has appropriate permissions
-        if not os.path.exists(target_directory):
-            os.makedirs(target_directory, exist_ok=True)
-            os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
-            logger.info(f"Created invoice directory at {target_directory}")
+        os.makedirs(target_directory, exist_ok=True)
+        os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
+        logger.info(f"Verified invoice directory: {target_directory}")
 
         # Define the filename path
         filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
@@ -34,7 +33,7 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         if os.path.exists(logo_path):
             c.drawImage(logo_path, 30, 770, width=120, height=80)
         else:
-            logger.warning("Logo not found, skipping.")
+            logger.warning("Logo not found. Skipping logo addition.")
 
         # Add company and invoice details
         c.setFont("Helvetica-Bold", 12)
