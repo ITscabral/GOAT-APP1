@@ -315,34 +315,34 @@ def send_invoice_to_db():
     username = request.form.get('username')
     if not username:
         return jsonify({'error': 'Username is required'}), 400
-    
+
     conn = get_db_connection()
-    
+
     try:
-        # Retrieve the most recent invoice for the user where 'sent' is 0
+        # Retrieve the most recent unsent invoice for the user
         existing_invoice = conn.execute(
             'SELECT * FROM invoices WHERE username = ? AND sent = 0 ORDER BY date DESC LIMIT 1',
             (username,)
         ).fetchone()
 
         if not existing_invoice:
-            conn.close()
             return jsonify({'error': 'No generated invoice found for this user to send.'}), 400
 
-        # Update the 'sent' column to 1 for this invoice
+        # Mark the invoice as sent
         conn.execute(
             'UPDATE invoices SET sent = 1 WHERE invoice_number = ?',
             (existing_invoice['invoice_number'],)
         )
         conn.commit()
 
-        # Confirm success
-        conn.close()
         return jsonify({'message': f"Invoice {existing_invoice['invoice_number']} sent successfully!"}), 200
 
     except sqlite3.Error as e:
-        conn.close()
         return jsonify({'error': f"Database error: {e}"}), 500
+
+    finally:
+        conn.close()
+
 
         
 @app.route('/download_invoice/<filename>')
