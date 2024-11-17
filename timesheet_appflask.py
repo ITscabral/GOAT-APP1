@@ -261,8 +261,10 @@ def generate_invoice_route():
 
     try:
         conn = get_db_connection()
+        
+        # Fetch time entries for the user
         entries = conn.execute(
-            'SELECT date, start_time, end_time FROM time_entries WHERE username = ?',
+            'SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
             (username,)
         ).fetchall()
 
@@ -270,6 +272,7 @@ def generate_invoice_route():
             app.logger.info(f"No time entries found for user {username}")
             return jsonify({'error': 'No time entries found for this user'}), 400
 
+        # Prepare invoice data
         invoice_date = datetime.now().strftime("%Y-%m-%d")
         invoice_number = conn.execute(
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
@@ -277,7 +280,7 @@ def generate_invoice_route():
 
         # Check if the invoice for today already exists
         existing_invoice = conn.execute(
-            'SELECT * FROM invoices WHERE username = ? AND date = ?',
+            'SELECT * FROM invoices WHERE LOWER(REPLACE(username, " ", "")) = ? AND date = ?',
             (username, invoice_date)
         ).fetchone()
 
@@ -285,7 +288,7 @@ def generate_invoice_route():
             app.logger.info(f"Invoice already exists for today: {username}")
             return jsonify({'error': 'An invoice for this date already exists'}), 400
 
-        # Generate timesheet data
+        # Process timesheet data
         timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
@@ -293,7 +296,7 @@ def generate_invoice_route():
         ]
         total_hours = sum(entry[3] for entry in timesheet_data)
 
-        # Generate invoice
+        # Generate invoice file
         filepath = generate_invoice(invoice_number, username, {
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
@@ -303,7 +306,7 @@ def generate_invoice_route():
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Invoice file not found at {filepath}")
 
-        # Save to database
+        # Save the invoice to the database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
@@ -312,13 +315,16 @@ def generate_invoice_route():
             (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
         )
         conn.commit()
-        conn.close()
 
+        app.logger.info(f"Invoice {invoice_number} generated successfully for user {username}")
         return send_file(filepath, as_attachment=True)
 
     except Exception as e:
         app.logger.error(f"Failed to generate invoice for {username}: {str(e)}")
-        return jsonify({'error': 'Failed to generate invoice'}), 500
+        return jsonify({'error': f"Failed to generate invoice: {str(e)}"}), 500
+
+    finally:
+        conn.close()
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
