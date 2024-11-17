@@ -261,7 +261,7 @@ def generate_invoice_route():
 
     try:
         conn = get_db_connection()
-        
+
         # Fetch time entries for the user
         entries = conn.execute(
             'SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
@@ -278,32 +278,12 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Check if the invoice for today already exists
-        existing_invoice = conn.execute(
-            'SELECT * FROM invoices WHERE LOWER(REPLACE(username, " ", "")) = ? AND date = ?',
-            (username, invoice_date)
-        ).fetchone()
+        # Directory for storing invoices
+        invoice_dir = "/tmp/invoices"
+        os.makedirs(invoice_dir, exist_ok=True)  # Ensure directory exists
 
-        if existing_invoice:
-            app.logger.info(f"Invoice already exists for today: {username}")
-            return jsonify({'error': 'An invoice for this date already exists'}), 400
-
-        # Process timesheet data
-        timesheet_data = [
-            (entry['date'], entry['start_time'], entry['end_time'],
-             round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
-            for entry in entries
-        ]
-        total_hours = sum(entry[3] for entry in timesheet_data)
-
-        # Use a temp directory to store invoices
-        invoice_dir = os.path.join("/tmp", "invoices")
-        os.makedirs(invoice_dir, exist_ok=True)
-        app.logger.info(f"Invoice directory: {invoice_dir}")
-
-        # Generate invoice file path
-        filename = f"Invoice_{invoice_number}.pdf"
-        filepath = os.path.join(invoice_dir, filename)
+        # Filepath for the invoice
+        filepath = os.path.join(invoice_dir, f"Invoice_{invoice_number}.pdf")
 
         # Generate the invoice
         app.logger.info(f"Generating invoice at: {filepath}")
@@ -311,21 +291,33 @@ def generate_invoice_route():
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
             "Phone": "+61 2 1234 5678"
-        }, timesheet_data, total_hours)
-        app.logger.info(f"Invoice generated at: {filepath}")
+        }, [
+            (entry['date'], entry['start_time'], entry['end_time'],
+             round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
+            for entry in entries
+        ], sum(
+            round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
+            for entry in entries
+        ))
 
-        # Check if the file was created
+        # Check if the file exists
         if not os.path.exists(filepath):
-            app.logger.error(f"Invoice file not found: {filepath}")
-            return jsonify({"error": f"Invoice file not found at {filepath}"}), 500
+            app.logger.error(f"Invoice file not found after generation: {filepath}")
+            return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
 
-        # Save the invoice to the database
+        # Save to database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
             VALUES (?, ?, ?, ?, ?, ?, 0)
             """,
-            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filename)
+            (invoice_number, username, invoice_date, sum(
+                round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
+                for entry in entries
+            ), sum(
+                round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2)
+                for entry in entries
+            ) * 30, f"Invoice_{invoice_number}.pdf")
         )
         conn.commit()
 
@@ -338,6 +330,7 @@ def generate_invoice_route():
 
     finally:
         conn.close()
+
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
