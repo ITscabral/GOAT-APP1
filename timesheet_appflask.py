@@ -78,7 +78,7 @@ initialize_db()
 
 def get_db_connection():
     # Ensure the persistent directory is correctly specified
-    db_path = '/var/data/timesheet.db'
+    db_path = '/var/data/.db'
 
     # Check if the database file exists
     if not os.path.exists(db_path):
@@ -96,28 +96,46 @@ def home():
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        username = request.form.get('username').strip().lower().replace(" ", "")
+        # Normalize the username (lowercase and remove spaces)
+        username = request.form.get('username')
         password = request.form.get('password')
 
         if not username or not password:
             return jsonify({'message': 'Username and password are required'}), 400
 
+        # Normalize username
+        normalized_username = username.strip().lower().replace(" ", "")
+
+        # Connect to the database
         conn = get_db_connection()
-        query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
-        user = conn.execute(query, (username, password)).fetchone()
+
+        # Fetch user details with normalized username
+        query = """
+            SELECT role, password 
+            FROM users 
+            WHERE LOWER(REPLACE(username, ' ', '')) = ?
+        """
+        user = conn.execute(query, (normalized_username,)).fetchone()
         conn.close()
 
+        # Validate user and password
         if user:
+            stored_password = user['password']
             role = user['role']
-            if role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            elif role == 'employee':
-                return redirect(url_for('employee_dashboard', username=username))
+
+            if password == stored_password:  # Replace with hashing if implemented
+                if role == 'admin':
+                    return redirect(url_for('admin_dashboard'))
+                elif role == 'employee':
+                    return redirect(url_for('employee_dashboard', username=normalized_username))
+            else:
+                return jsonify({'message': 'Invalid credentials'}), 401
         else:
             return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
         return jsonify({'error': f"Database error during login: {e}"}), 500
+
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -315,8 +333,8 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Process timesheet data
-        timesheet_data = [
+        # Process  data
+        _data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
             for entry in entries
