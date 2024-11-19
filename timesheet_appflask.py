@@ -115,21 +115,21 @@ def login():
 
         
 
+
+
 def get_db_connection():
-    # Correct path to the database file
+    # Ensure the persistent directory is correctly specified
     db_path = '/var/data/timesheet.db'
 
     # Check if the database file exists
     if not os.path.exists(db_path):
         raise FileNotFoundError(f"Database file not found at {db_path}")
 
-    try:
-        # Connect to the SQLite database
-        conn = sqlite3.connect(db_path, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except sqlite3.Error as e:
-        raise RuntimeError(f"Failed to connect to the database: {e}")
+    # Connect to the SQLite database
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
         
 @app.route('/admin_dashboard')
