@@ -104,11 +104,11 @@ def login():
         # Normalize username
         normalized_username = username.strip().lower().replace(" ", "")
 
+        # Debugging: Log inputs
+        app.logger.info(f"Login attempt for username: {normalized_username}")
+
         # Connect to the database
         conn = get_db_connection()
-
-        # Debugging: Print the username and password
-        app.logger.info(f"Attempting login with username: {normalized_username}")
 
         # SQL query to find the user
         query = """
@@ -116,12 +116,6 @@ def login():
             WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
         """
         user = conn.execute(query, (normalized_username, password)).fetchone()
-
-        # Debugging: Check if the query returned a result
-        if user:
-            app.logger.info(f"User found: {normalized_username}, Role: {user['role']}")
-        else:
-            app.logger.warning(f"No matching user found for username: {normalized_username}")
 
         # Close the database connection
         conn.close()
@@ -134,11 +128,12 @@ def login():
             elif role == 'employee':
                 return redirect(url_for('employee_dashboard', username=normalized_username))
         else:
+            app.logger.warning(f"Invalid credentials for username: {normalized_username}")
             return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
         # Handle database errors
-        app.logger.error(f"Database error: {e}")
+        app.logger.error(f"Database error during login: {e}")
         return jsonify({'error': f"Database error during login: {e}"}), 500
 
     except Exception as e:
@@ -146,22 +141,26 @@ def login():
         app.logger.error(f"Unexpected error: {e}")
         return jsonify({'error': f"Unexpected error: {e}"}), 500
 
+
         
 
 
 
 def get_db_connection():
-    # Ensure the persistent directory is correctly specified
     db_path = '/var/data/timesheet.db'
 
-    # Check if the database file exists
+    # Ensure the database file exists
     if not os.path.exists(db_path):
         raise FileNotFoundError(f"Database file not found at {db_path}")
 
-    # Connect to the SQLite database
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Failed to connect to the database: {e}")
+
 
 
         
@@ -361,8 +360,8 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Process  data
-        _data = [
+        # Process timesheet data
+        timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
             for entry in entries
@@ -381,7 +380,7 @@ def generate_invoice_route():
             app.logger.error(f"Invoice generation failed. File not found: {filepath}")
             return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
 
-        # Save to database (Store only the filename)
+        # Save to database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
@@ -393,7 +392,7 @@ def generate_invoice_route():
                 invoice_date,
                 total_hours,
                 total_hours * 30,
-                os.path.basename(filepath)  # Save only the filename
+                os.path.basename(filepath)
             )
         )
         conn.commit()
@@ -407,6 +406,7 @@ def generate_invoice_route():
 
     finally:
         conn.close()
+
 
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
