@@ -111,60 +111,31 @@ def home():
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        # Retrieve input data
-        username = request.form.get('username')
+        username = request.form.get('username').strip().lower().replace(" ", "")
         password = request.form.get('password')
 
-        # Validate input
         if not username or not password:
-            app.logger.error("Username or password is missing.")
             return jsonify({'message': 'Username and password are required'}), 400
 
-        # Normalize username
-        normalized_username = username.strip().lower().replace(" ", "")
-
-        # Log input normalization
-        app.logger.info(f"Normalized username: {normalized_username}")
-
-        # Connect to the database
         conn = get_db_connection()
-
-        # Query the user
         query = """
-            SELECT role, password 
-            FROM users 
-            WHERE LOWER(REPLACE(username, ' ', '')) = ?
+            SELECT role FROM users 
+            WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
         """
-        app.logger.info("Executing database query for user login.")
-        user = conn.execute(query, (normalized_username,)).fetchone()
+        user = conn.execute(query, (username, password)).fetchone()
         conn.close()
 
-        # Validate user existence
         if user:
-            stored_password = user['password']
             role = user['role']
-
-            # Validate password
-            if password == stored_password:  # Replace with hashed password check if implemented
-                app.logger.info(f"User '{normalized_username}' logged in as '{role}'.")
-                if role == 'admin':
-                    return redirect(url_for('admin_dashboard'))
-                elif role == 'employee':
-                    return redirect(url_for('employee_dashboard', username=normalized_username))
-            else:
-                app.logger.warning(f"Invalid password for user '{normalized_username}'.")
-                return jsonify({'message': 'Invalid credentials'}), 401
+            if role == 'admin':
+                return redirect(url_for('admin_dashboard'))
+            elif role == 'employee':
+                return redirect(url_for('employee_dashboard', username=username))
         else:
-            app.logger.warning(f"User '{normalized_username}' not found.")
             return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
-        app.logger.error(f"Database error during login: {e}")
         return jsonify({'error': f"Database error during login: {e}"}), 500
-
-    except Exception as e:
-        app.logger.error(f"Unexpected error during login: {e}")
-        return jsonify({'error': f"Unexpected error: {e}"}), 500
 
 
 
