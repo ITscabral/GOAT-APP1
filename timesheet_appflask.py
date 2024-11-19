@@ -313,22 +313,22 @@ def generate_invoice_route():
             app.logger.error(f"Invoice generation failed. File not found: {filepath}")
             return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
 
-        # Save to database
+        # Save to database (Store only the filename)
         conn.execute(
-        """
-        INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
-        VALUES (?, ?, ?, ?, ?, ?, 0)
-        """,
-        (
-            invoice_number,
-            username,
-            invoice_date,
-            total_hours,
-            total_hours * 30,
-            f"Invoice_{invoice_number}_{username}.pdf"  # Store only the filename
+            """
+            INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
+            VALUES (?, ?, ?, ?, ?, ?, 0)
+            """,
+            (
+                invoice_number,
+                username,
+                invoice_date,
+                total_hours,
+                total_hours * 30,
+                os.path.basename(filepath)  # Save only the filename
+            )
         )
-    )
-    conn.commit()
+        conn.commit()
 
         app.logger.info(f"Invoice {invoice_number} generated successfully for user {username}")
         return send_file(filepath, as_attachment=True)
@@ -339,6 +339,7 @@ def generate_invoice_route():
 
     finally:
         conn.close()
+
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
@@ -386,7 +387,6 @@ def send_invoice_to_db():
 
     finally:
         conn.close()
-
 
         
 @app.route('/download_invoice/<filename>')
