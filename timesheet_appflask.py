@@ -25,9 +25,17 @@ ensure_invoice_directory()
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
-    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
+    # Define the persistent database path
+    db_path = "/var/data/timesheet.db"
+
+    # Ensure the directory for the database exists
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+
+    # Connect to the database
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     cursor = conn.cursor()
 
+    # Create the users table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
@@ -36,6 +44,8 @@ def initialize_db():
             phone_number TEXT
         )
     ''')
+
+    # Create the time_entries table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS time_entries (
             username TEXT,
@@ -45,6 +55,8 @@ def initialize_db():
             FOREIGN KEY (username) REFERENCES users (username)
         )
     ''')
+
+    # Create the invoices table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS invoices (
             invoice_number INTEGER PRIMARY KEY,
@@ -57,9 +69,14 @@ def initialize_db():
             FOREIGN KEY (username) REFERENCES users (username)
         )
     ''')
+
+    # Commit the changes and close the connection
     conn.commit()
     conn.close()
 
+    print(f"Database initialized at: {db_path}")
+
+# Call the function to initialize the database
 initialize_db()
 
 def get_db_connection():
