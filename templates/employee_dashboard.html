@@ -129,8 +129,13 @@
                 <td>{{ invoice.total_hours }}</td>
                 <td>${{ invoice.total_payment }}</td>
                 <td>
-                    <!-- Use only the filename in the URL -->
+                    <!-- Open PDF -->
                     <a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-link" target="_blank">Open PDF</a>
+                    <!-- Delete Invoice -->
+                    <form action="{{ url_for('delete_invoice') }}" method="POST" style="display:inline;">
+                        <input type="hidden" name="invoice_number" value="{{ invoice.invoice_number }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
                 </td>
             </tr>
             {% endfor %}
