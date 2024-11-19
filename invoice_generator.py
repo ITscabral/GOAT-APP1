@@ -17,16 +17,15 @@ def generate_invoice(invoice_number, employee_name, company_info, timesheet_data
         target_directory = "/tmp/invoices"
 
         # Ensure the target directory exists
-        try:
+        if not os.path.exists(target_directory):
             os.makedirs(target_directory, exist_ok=True)
             os.chmod(target_directory, stat.S_IRWXU | stat.S_IRGRP | stat.S_IROTH)
-            logger.info(f"Verified invoice directory: {target_directory}")
-        except Exception as dir_error:
-            logger.error(f"Failed to create or set permissions for directory '{target_directory}': {dir_error}")
-            return None
+            logger.info(f"Created and set permissions for directory: {target_directory}")
+        else:
+            logger.info(f"Verified invoice directory exists: {target_directory}")
 
         # Define the full file path for the invoice
-        filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name}.pdf")
+        filename = os.path.join(target_directory, f"Invoice_{invoice_number}_{employee_name.replace(' ', '_')}.pdf")
         logger.info(f"Attempting to create invoice file at: {filename}")
 
         # Create the PDF
