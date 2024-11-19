@@ -6,6 +6,18 @@ from invoice_generator import generate_invoice
 from db_handler import Database
 
 
+
+def ensure_invoice_directory():
+    directory = "/tmp/invoices"
+    if not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)
+        print(f"Invoice directory created: {directory}")
+    else:
+        print(f"Invoice directory already exists: {directory}")
+
+# Call the function to ensure the directory exists
+ensure_invoice_directory()
+
 app = Flask(__name__)
 
 # Initialize the database and create tables if they don't exist
