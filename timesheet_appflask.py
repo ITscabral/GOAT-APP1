@@ -98,28 +98,48 @@ def home():
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        username = request.form.get('username').strip().lower().replace(" ", "")
+        username = request.form.get('username')
         password = request.form.get('password')
 
+        # Log inputs
+        app.logger.info(f"Login attempt: username={username}, password={password}")
+
+        # Validate inputs
         if not username or not password:
             return jsonify({'message': 'Username and password are required'}), 400
 
+        # Normalize username
+        normalized_username = username.strip().lower().replace(" ", "")
+        app.logger.info(f"Normalized username: {normalized_username}")
+
+        # Connect to the database
         conn = get_db_connection()
-        query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
-        user = conn.execute(query, (username, password)).fetchone()
+
+        # SQL query to find the user
+        query = """
+            SELECT username, role FROM users 
+            WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
+        """
+        user = conn.execute(query, (normalized_username, password)).fetchone()
+        app.logger.info(f"Query result: {user}")
         conn.close()
 
+        # Process the result
         if user:
             role = user['role']
             if role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif role == 'employee':
-                return redirect(url_for('employee_dashboard', username=username))
+                return redirect(url_for('employee_dashboard', username=user['username']))
         else:
             return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
+        app.logger.error(f"Database error: {e}")
         return jsonify({'error': f"Database error during login: {e}"}), 500
+    except Exception as e:
+        app.logger.error(f"Unexpected error: {e}")
+        return jsonify({'error': f"Unexpected error: {e}"}), 500
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
