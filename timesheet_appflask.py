@@ -11,15 +11,15 @@ from db_handler import Database
 app = Flask(__name__)
 
 def ensure_invoice_directory():
-    directory = "/tmp/invoices"
+    directory = "/var/data/invoices"
     if not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
         print(f"Invoice directory created: {directory}")
     else:
         print(f"Invoice directory already exists: {directory}")
 
-# Call the function to ensure the directory exists
 ensure_invoice_directory()
+
 
 
 # Initialize the database and create tables if they don't exist
@@ -340,7 +340,10 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Process timesheet data
+        # Prepare invoice data
+        directory = "/var/data/invoices"
+        os.makedirs(directory, exist_ok=True)
+        filepath = os.path.join(directory, f"Invoice_{invoice_number}_{username}.pdf")
         timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
@@ -348,19 +351,13 @@ def generate_invoice_route():
         ]
         total_hours = sum(entry[3] for entry in timesheet_data)
 
-        # Generate invoice
-        filepath = generate_invoice(invoice_number, username, {
+        generate_invoice(invoice_number, username, {
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
             "Phone": "+61 2 1234 5678"
-        }, timesheet_data, total_hours)
+        }, timesheet_data, total_hours, filepath)
 
-        # Check if the file exists
-        if not filepath or not os.path.exists(filepath):
-            app.logger.error(f"Invoice generation failed. File not found: {filepath}")
-            return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
-
-        # Save to database (Store only the filename)
+        # Save invoice to database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
@@ -372,10 +369,11 @@ def generate_invoice_route():
                 invoice_date,
                 total_hours,
                 total_hours * 30,
-                os.path.basename(filepath)  # Save only the filename
+                os.path.basename(filepath)
             )
         )
         conn.commit()
+        conn.close()
 
         app.logger.info(f"Invoice {invoice_number} generated successfully for user {username}")
         return send_file(filepath, as_attachment=True)
@@ -383,6 +381,7 @@ def generate_invoice_route():
     except Exception as e:
         app.logger.error(f"Failed to generate invoice for {username}: {str(e)}")
         return jsonify({'error': f"Failed to generate invoice: {str(e)}"}), 500
+
 
     finally:
         conn.close()
@@ -439,21 +438,15 @@ def send_invoice_to_db():
 @app.route('/download_invoice/<filename>')
 def download_invoice(filename):
     try:
-        # Define the directory where invoices are stored
-        directory = "/tmp/invoices"
+        directory = "/var/data/invoices"
         file_path = os.path.join(directory, filename)
 
-        # Log the directory and file name for debugging
-        app.logger.info(f"Looking for file in directory: {directory}")
-        app.logger.info(f"Requested file: {filename}")
-
-        # Check if the file exists
         if not os.path.exists(file_path):
-            app.logger.error(f"File not found: {file_path}")
-            return jsonify({"error": "File not found"}), 404
+            app.logger.error(f"Invoice not found: {file_path}")
+            return jsonify({"error": "Invoice not found"}), 404
 
-        # Serve the file
         return send_from_directory(directory, filename, as_attachment=False)
+
     except Exception as e:
         app.logger.error(f"Error serving the invoice: {str(e)}")
         return jsonify({"error": f"Error serving the invoice: {str(e)}"}), 500
