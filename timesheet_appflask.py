@@ -133,6 +133,22 @@ def login():
         return jsonify({'error': f"Unexpected error: {e}"}), 500
 
 
+def get_db_connection():
+    # Define the correct path to the database
+    db_path = '/var/data/timesheet.db'
+
+    # Ensure the database file exists
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"Database file not found at {db_path}")
+
+    try:
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Failed to connect to the database: {e}")
+        
 @app.route('/admin_dashboard')
 def admin_dashboard():
     conn = get_db_connection()
