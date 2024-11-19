@@ -389,8 +389,9 @@ def download_invoice(filename):
         directory = "/tmp/invoices"
         file_path = os.path.join(directory, filename)
 
-        # Log file path for debugging
-        app.logger.info(f"Looking for file: {file_path}")
+        # Log for debugging
+        app.logger.info(f"Looking for file in directory: {directory}")
+        app.logger.info(f"Requested file: {filename}")
 
         # Check if the file exists
         if not os.path.exists(file_path):
