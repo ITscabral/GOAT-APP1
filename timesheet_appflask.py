@@ -101,29 +101,35 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Log input values
-        app.logger.info(f"Login attempt: username={username}, password={password}")
+        # Debugging: Log raw inputs
+        app.logger.info(f"Login attempt with raw username: '{username}' and password: '{password}'")
 
         if not username or not password:
             return jsonify({'message': 'Username and password are required'}), 400
 
+        # Normalize username
         normalized_username = username.strip().lower().replace(" ", "")
-        app.logger.info(f"Normalized username: {normalized_username}")
+        app.logger.info(f"Normalized username: '{normalized_username}'")
 
+        # Connect to the database
         conn = get_db_connection()
         query = """
             SELECT username, role FROM users 
             WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
         """
         user = conn.execute(query, (normalized_username, password)).fetchone()
+
+        # Debugging: Log query result
         app.logger.info(f"Query result: {user}")
         conn.close()
 
         if user:
             role = user['role']
             if role == 'admin':
+                app.logger.info(f"Admin login successful for {user['username']}")
                 return redirect(url_for('admin_dashboard'))
             elif role == 'employee':
+                app.logger.info(f"Employee login successful for {user['username']}")
                 return redirect(url_for('employee_dashboard', username=user['username']))
         else:
             app.logger.warning("Invalid credentials")
@@ -132,6 +138,7 @@ def login():
     except sqlite3.Error as e:
         app.logger.error(f"Database error: {e}")
         return jsonify({'error': f"Database error during login: {e}"}), 500
+
     except Exception as e:
         app.logger.error(f"Unexpected error: {e}")
         return jsonify({'error': f"Unexpected error: {e}"}), 500
