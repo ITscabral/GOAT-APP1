@@ -101,6 +101,9 @@ def login():
         # Normalize username
         normalized_username = username.strip().lower().replace(" ", "")
 
+        # Log inputs for debugging
+        app.logger.info(f"Login attempt: username={normalized_username}, password={password}")
+
         # Connect to the database
         conn = get_db_connection()
 
@@ -111,19 +114,20 @@ def login():
         """
         user = conn.execute(query, (normalized_username, password)).fetchone()
 
+        # Log query result
+        app.logger.info(f"Database result: {user}")
+
         # Close the database connection
         conn.close()
 
         # Process the result
         if user:
             role = user['role']
-            # Redirect based on role
             if role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             elif role == 'employee':
                 return redirect(url_for('employee_dashboard', username=user['username']))
         else:
-            # Invalid credentials
             return jsonify({'message': 'Invalid username or password. Please try again.'}), 401
 
     except sqlite3.Error as e:
@@ -133,7 +137,7 @@ def login():
     except Exception as e:
         # Handle unexpected errors
         return jsonify({'error': f"Unexpected error: {e}"}), 500
-
+        
 
 def get_db_connection():
     # Define the correct path to the database
