@@ -87,6 +87,10 @@ def initialize_db():
 # Call the function to initialize the database
 initialize_db()
 
+@app.route('/')
+def home():
+    return render_template('index.html')
+    
 @app.route('/login', methods=['POST'])
 def login():
     try:
