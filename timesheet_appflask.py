@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directory, abort
 import sqlite3
 import os
@@ -87,10 +88,6 @@ def initialize_db():
 # Call the function to initialize the database
 initialize_db()
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-    
 @app.route('/login', methods=['POST'])
 def login():
     try:
