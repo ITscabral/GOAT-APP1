@@ -101,21 +101,16 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Log inputs
+        # Log input values
         app.logger.info(f"Login attempt: username={username}, password={password}")
 
-        # Validate inputs
         if not username or not password:
             return jsonify({'message': 'Username and password are required'}), 400
 
-        # Normalize username
         normalized_username = username.strip().lower().replace(" ", "")
         app.logger.info(f"Normalized username: {normalized_username}")
 
-        # Connect to the database
         conn = get_db_connection()
-
-        # SQL query to find the user
         query = """
             SELECT username, role FROM users 
             WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
@@ -124,7 +119,6 @@ def login():
         app.logger.info(f"Query result: {user}")
         conn.close()
 
-        # Process the result
         if user:
             role = user['role']
             if role == 'admin':
@@ -132,6 +126,7 @@ def login():
             elif role == 'employee':
                 return redirect(url_for('employee_dashboard', username=user['username']))
         else:
+            app.logger.warning("Invalid credentials")
             return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
@@ -140,6 +135,7 @@ def login():
     except Exception as e:
         app.logger.error(f"Unexpected error: {e}")
         return jsonify({'error': f"Unexpected error: {e}"}), 500
+
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
