@@ -389,7 +389,7 @@ def download_invoice(filename):
         directory = "/tmp/invoices"
         file_path = os.path.join(directory, filename)
 
-        # Log for debugging
+        # Log the directory and file name for debugging
         app.logger.info(f"Looking for file in directory: {directory}")
         app.logger.info(f"Requested file: {filename}")
 
@@ -403,7 +403,6 @@ def download_invoice(filename):
     except Exception as e:
         app.logger.error(f"Error serving the invoice: {str(e)}")
         return jsonify({"error": f"Error serving the invoice: {str(e)}"}), 500
-
 
 
     
