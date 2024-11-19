@@ -16,8 +16,9 @@ def ensure_invoice_directory():
     else:
         print(f"Invoice directory already exists: {directory}")
 
-# Ensure invoice directory exists
+# Call this function to ensure the directory is available
 ensure_invoice_directory()
+
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
