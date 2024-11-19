@@ -25,61 +25,84 @@ def initialize_db():
     # Define the persistent database path
     db_path = "/var/data/timesheet.db"
 
-    # Ensure the directory for the database exists
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    try:
+        # Ensure the directory for the database exists
+        os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-    # Connect to the database
-    conn = sqlite3.connect(db_path, check_same_thread=False)
-    cursor = conn.cursor()
+        # Connect to the database
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        cursor = conn.cursor()
 
-    # Create the users table if it doesn't exist
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            username TEXT PRIMARY KEY,
-            password TEXT NOT NULL,
-            role TEXT NOT NULL,
-            phone_number TEXT
-        )
-    ''')
+        # Create the users table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+                username TEXT PRIMARY KEY,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                phone_number TEXT
+            )
+        ''')
 
-    # Create the time_entries table if it doesn't exist
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS time_entries (
-            username TEXT,
-            date TEXT,
-            start_time TEXT,
-            end_time TEXT,
-            FOREIGN KEY (username) REFERENCES users (username)
-        )
-    ''')
+        # Create the time_entries table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS time_entries (
+                username TEXT,
+                date TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                FOREIGN KEY (username) REFERENCES users (username)
+            )
+        ''')
 
-    # Create the invoices table if it doesn't exist
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS invoices (
-            invoice_number INTEGER PRIMARY KEY,
-            username TEXT NOT NULL,
-            date TEXT NOT NULL,
-            total_hours REAL NOT NULL,
-            total_payment REAL NOT NULL,
-            filename TEXT NOT NULL,
-            sent INTEGER DEFAULT 0,
-            FOREIGN KEY (username) REFERENCES users (username)
-        )
-    ''')
+        # Create the invoices table if it doesn't exist
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS invoices (
+                invoice_number INTEGER PRIMARY KEY,
+                username TEXT NOT NULL,
+                date TEXT NOT NULL,
+                total_hours REAL NOT NULL,
+                total_payment REAL NOT NULL,
+                filename TEXT NOT NULL,
+                sent INTEGER DEFAULT 0,
+                FOREIGN KEY (username) REFERENCES users (username)
+            )
+        ''')
 
-    # Commit the changes and close the connection
-    conn.commit()
-    conn.close()
+        # Commit the changes and close the connection
+        conn.commit()
+        print(f"Database initialized successfully at: {db_path}")
 
-    print(f"Database initialized at: {db_path}")
+    except sqlite3.Error as e:
+        print(f"Error initializing database: {e}")
+        raise
+
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        raise
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 # Call the function to initialize the database
 initialize_db()
 
 def get_db_connection():
-    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    # Correct path to the database file
+    db_path = '/var/data/timesheet.db'
+
+    # Check if the database file exists
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"Database file not found at {db_path}")
+
+    try:
+        # Connect to the SQLite database
+        conn = sqlite3.connect(db_path, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        raise RuntimeError(f"Failed to connect to the database: {e}")
+
 
 @app.route('/')
 def home():
@@ -95,7 +118,10 @@ def login():
             return jsonify({'message': 'Username and password are required'}), 400
 
         conn = get_db_connection()
-        query = "SELECT role FROM users WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?"
+        query = """
+            SELECT role FROM users 
+            WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
+        """
         user = conn.execute(query, (username, password)).fetchone()
         conn.close()
 
@@ -110,6 +136,8 @@ def login():
 
     except sqlite3.Error as e:
         return jsonify({'error': f"Database error during login: {e}"}), 500
+
+
 
 @app.route('/admin_dashboard')
 def admin_dashboard():
@@ -307,8 +335,8 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Process timesheet data
-        timesheet_data = [
+        # Process  data
+        _data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
             for entry in entries
