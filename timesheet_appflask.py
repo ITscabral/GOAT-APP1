@@ -433,7 +433,7 @@ def send_invoice_to_db():
         conn.close()
 
         
-@app.route('/download_invoice/<filename>')
+@app.route('/download_invoice/<filename>', methods=['GET'])
 def download_invoice(filename):
     try:
         directory = "/var/data/invoices"
@@ -442,39 +442,10 @@ def download_invoice(filename):
         if not os.path.exists(file_path):
             return jsonify({"error": "Invoice not found"}), 404
 
-        return send_from_directory(directory, filename, as_attachment=False)
+        return send_from_directory(directory, filename, as_attachment=True)
 
     except Exception as e:
         return jsonify({"error": f"Error serving the invoice: {str(e)}"}), 500
-
-@app.route('/check_directory', methods=['GET'])
-def check_directory():
-    try:
-        # Define the base directory and invoice directory
-        base_dir = "/var/data"
-        invoice_dir = os.path.join(base_dir, "invoices")
-
-        # Check if the directories exist
-        base_exists = os.path.exists(base_dir)
-        invoice_exists = os.path.exists(invoice_dir)
-
-        # Attempt to create the invoice directory if it doesn't exist
-        if base_exists and not invoice_exists:
-            os.makedirs(invoice_dir, exist_ok=True)
-            message = f"Created directory: {invoice_dir}"
-        elif base_exists and invoice_exists:
-            message = f"Directory {invoice_dir} already exists."
-        else:
-            message = f"Base directory {base_dir} does not exist."
-
-        return jsonify({
-            "base_exists": base_exists,
-            "invoice_exists": invoice_exists,
-            "message": message
-        }), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
     
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
