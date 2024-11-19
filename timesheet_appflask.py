@@ -6,7 +6,6 @@ from invoice_generator import generate_invoice
 from db_handler import Database
 
 
-
 app = Flask(__name__)
 
 def ensure_invoice_directory():
