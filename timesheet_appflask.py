@@ -432,20 +432,31 @@ def send_invoice_to_db():
     finally:
         conn.close()
 
-        
+
+
 @app.route('/download_invoice/<filename>', methods=['GET'])
 def download_invoice(filename):
     try:
         directory = "/var/data/invoices"
         file_path = os.path.join(directory, filename)
 
-        if not os.path.exists(file_path):
-            return jsonify({"error": "Invoice not found"}), 404
+        # Log the file path for debugging
+        app.logger.info(f"Attempting to serve file: {file_path}")
 
-        return send_from_directory(directory, filename, as_attachment=True)
+        # Verify if the file exists
+        if not os.path.exists(file_path):
+            app.logger.error(f"Invoice not found: {file_path}")
+            return jsonify({"error": f"Invoice not found: {file_path}"}), 404
+
+        # Serve the file
+        return send_from_directory(directory, filename, as_attachment=False)
 
     except Exception as e:
+        app.logger.error(f"Error serving the invoice: {str(e)}")
         return jsonify({"error": f"Error serving the invoice: {str(e)}"}), 500
+
+        
+
     
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
