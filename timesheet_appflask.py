@@ -90,70 +90,62 @@ initialize_db()
 @app.route('/login', methods=['POST'])
 def login():
     try:
-        # Retrieve form inputs
+        # Normalize the username (lowercase and remove spaces)
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Validate inputs
         if not username or not password:
             return jsonify({'message': 'Username and password are required'}), 400
 
         # Normalize username
         normalized_username = username.strip().lower().replace(" ", "")
 
-        # Log inputs for debugging
-        app.logger.info(f"Login attempt: username={normalized_username}, password={password}")
-
         # Connect to the database
         conn = get_db_connection()
 
-        # SQL query to find the user
+        # Fetch user details with normalized username
         query = """
-            SELECT username, role FROM users 
-            WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
+            SELECT role, password 
+            FROM users 
+            WHERE LOWER(REPLACE(username, ' ', '')) = ?
         """
-        user = conn.execute(query, (normalized_username, password)).fetchone()
-
-        # Log query result
-        app.logger.info(f"Database result: {user}")
-
-        # Close the database connection
+        user = conn.execute(query, (normalized_username,)).fetchone()
         conn.close()
 
-        # Process the result
+        # Validate user and password
         if user:
+            stored_password = user['password']
             role = user['role']
-            if role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            elif role == 'employee':
-                return redirect(url_for('employee_dashboard', username=user['username']))
+
+            if password == stored_password:  # Replace with hashing if implemented
+                if role == 'admin':
+                    return redirect(url_for('admin_dashboard'))
+                elif role == 'employee':
+                    return redirect(url_for('employee_dashboard', username=normalized_username))
+            else:
+                return jsonify({'message': 'Invalid credentials'}), 401
         else:
-            return jsonify({'message': 'Invalid username or password. Please try again.'}), 401
+            return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
-        # Handle database errors
         return jsonify({'error': f"Database error during login: {e}"}), 500
 
-    except Exception as e:
-        # Handle unexpected errors
-        return jsonify({'error': f"Unexpected error: {e}"}), 500
+
         
 
 def get_db_connection():
-    # Define the correct path to the database
+    # Ensure the persistent directory is correctly specified
     db_path = '/var/data/timesheet.db'
 
-    # Ensure the database file exists
+    # Check if the database file exists
     if not os.path.exists(db_path):
         raise FileNotFoundError(f"Database file not found at {db_path}")
 
-    try:
-        # Connect to the SQLite database
-        conn = sqlite3.connect(db_path, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        return conn
-    except sqlite3.Error as e:
-        raise RuntimeError(f"Failed to connect to the database: {e}")        
+    # Connect to the SQLite database
+    conn = sqlite3.connect(db_path, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    return conn
+        
 @app.route('/admin_dashboard')
 def admin_dashboard():
     conn = get_db_connection()
