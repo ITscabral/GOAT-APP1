@@ -18,23 +18,19 @@ def ensure_invoice_directory():
     else:
         print(f"Invoice directory already exists: {directory}")
 
+# Ensure invoice directory exists
 ensure_invoice_directory()
 
 
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
-    # Define the persistent database path
     db_path = "/var/data/timesheet.db"
-
-    # Ensure the directory for the database exists
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
 
-    # Connect to the database
     conn = sqlite3.connect(db_path, check_same_thread=False)
     cursor = conn.cursor()
 
-    # Create the users table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
@@ -44,7 +40,6 @@ def initialize_db():
         )
     ''')
 
-    # Create the time_entries table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS time_entries (
             username TEXT,
@@ -55,7 +50,6 @@ def initialize_db():
         )
     ''')
 
-    # Create the invoices table if it doesn't exist
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS invoices (
             invoice_number INTEGER PRIMARY KEY,
@@ -69,24 +63,20 @@ def initialize_db():
         )
     ''')
 
-    # Commit the changes and close the connection
     conn.commit()
     conn.close()
-
     print(f"Database initialized at: {db_path}")
 
-# Call the function to initialize the database
+# Ensure database is initialized
 initialize_db()
 
-def get_db_connection():
-    # Ensure the persistent directory is correctly specified
-    db_path = '/var/data/timesheet.db'
 
-    # Check if the database file exists
+
+
+def get_db_connection():
+    db_path = '/var/data/timesheet.db'
     if not os.path.exists(db_path):
         raise FileNotFoundError(f"Database file not found at {db_path}")
-
-    # Connect to the SQLite database
     conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
@@ -101,47 +91,29 @@ def login():
         username = request.form.get('username')
         password = request.form.get('password')
 
-        # Debugging: Log raw inputs
-        app.logger.info(f"Login attempt with raw username: '{username}' and password: '{password}'")
-
         if not username or not password:
             return jsonify({'message': 'Username and password are required'}), 400
 
-        # Normalize username
         normalized_username = username.strip().lower().replace(" ", "")
-        app.logger.info(f"Normalized username: '{normalized_username}'")
-
-        # Connect to the database
         conn = get_db_connection()
         query = """
             SELECT username, role FROM users 
             WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
         """
         user = conn.execute(query, (normalized_username, password)).fetchone()
-
-        # Debugging: Log query result
-        app.logger.info(f"Query result: {user}")
         conn.close()
 
         if user:
             role = user['role']
             if role == 'admin':
-                app.logger.info(f"Admin login successful for {user['username']}")
                 return redirect(url_for('admin_dashboard'))
             elif role == 'employee':
-                app.logger.info(f"Employee login successful for {user['username']}")
                 return redirect(url_for('employee_dashboard', username=user['username']))
         else:
-            app.logger.warning("Invalid credentials")
             return jsonify({'message': 'Invalid credentials'}), 401
 
     except sqlite3.Error as e:
-        app.logger.error(f"Database error: {e}")
         return jsonify({'error': f"Database error during login: {e}"}), 500
-
-    except Exception as e:
-        app.logger.error(f"Unexpected error: {e}")
-        return jsonify({'error': f"Unexpected error: {e}"}), 500
 
 
 @app.route('/admin_dashboard')
@@ -173,7 +145,7 @@ def admin_dashboard():
     entry_list = []
     for entry in entries:
         entry_data = {
-            'username': ' '.join(entry['username'].strip().title().split()),
+            'username': entry['username'].strip().title(),
             'date': entry['date'],
             'start_time': entry['start_time'],
             'end_time': entry['end_time'],
@@ -188,7 +160,7 @@ def admin_dashboard():
     for invoice in invoices:
         invoice_data = {
             'invoice_number': invoice['invoice_number'],
-            'username': ' '.join(invoice['username'].strip().title().split()),
+            'username': invoice['username'].strip().title(),
             'date': invoice['date'],
             'total_hours': invoice['total_hours'],
             'total_payment': invoice['total_payment'],
@@ -211,13 +183,14 @@ def add_employee():
         conn = get_db_connection()
         conn.execute(
             'INSERT INTO users (username, password, role, phone_number) VALUES (?, ?, ?, ?)',
-            (name.lower().replace(" ", "_"), '123', role, phone_number)
+            (name.strip().lower().replace(" ", ""), '123', role, phone_number)
         )
         conn.commit()
         conn.close()
         return redirect(url_for('admin_dashboard'))
     except sqlite3.IntegrityError:
         return jsonify({'error': 'User already exists!'}), 400
+
 
 @app.route('/employee_dashboard/<username>')
 def employee_dashboard(username):
@@ -316,34 +289,28 @@ def delete_time_entry():
 @app.route('/generate_invoice', methods=['POST'])
 def generate_invoice_route():
     username = request.form.get('username').strip().lower().replace(" ", "")
-
     if not username:
-        app.logger.error("Username is required for generating an invoice")
         return jsonify({'error': 'Username is required'}), 400
 
     try:
         conn = get_db_connection()
-
-        # Fetch time entries
         entries = conn.execute(
             'SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
             (username,)
         ).fetchall()
 
         if not entries:
-            app.logger.info(f"No time entries found for user {username}")
             return jsonify({'error': 'No time entries found for this user'}), 400
 
-        # Invoice data
         invoice_date = datetime.now().strftime("%Y-%m-%d")
         invoice_number = conn.execute(
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Prepare invoice data
         directory = "/var/data/invoices"
-        os.makedirs(directory, exist_ok=True)
         filepath = os.path.join(directory, f"Invoice_{invoice_number}_{username}.pdf")
+        os.makedirs(directory, exist_ok=True)
+
         timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
@@ -357,7 +324,6 @@ def generate_invoice_route():
             "Phone": "+61 2 1234 5678"
         }, timesheet_data, total_hours, filepath)
 
-        # Save invoice to database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
@@ -374,17 +340,11 @@ def generate_invoice_route():
         )
         conn.commit()
         conn.close()
-
-        app.logger.info(f"Invoice {invoice_number} generated successfully for user {username}")
         return send_file(filepath, as_attachment=True)
 
     except Exception as e:
-        app.logger.error(f"Failed to generate invoice for {username}: {str(e)}")
         return jsonify({'error': f"Failed to generate invoice: {str(e)}"}), 500
 
-
-    finally:
-        conn.close()
 
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
@@ -442,14 +402,13 @@ def download_invoice(filename):
         file_path = os.path.join(directory, filename)
 
         if not os.path.exists(file_path):
-            app.logger.error(f"Invoice not found: {file_path}")
             return jsonify({"error": "Invoice not found"}), 404
 
         return send_from_directory(directory, filename, as_attachment=False)
 
     except Exception as e:
-        app.logger.error(f"Error serving the invoice: {str(e)}")
         return jsonify({"error": f"Error serving the invoice: {str(e)}"}), 500
+
 
 
     
