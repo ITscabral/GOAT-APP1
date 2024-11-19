@@ -15,7 +15,7 @@
             background-color: #f5f5f5;
         }
         .login-container {
-            width: 90%;
+            width: 90%; /* Adjusted for smaller screens */
             max-width: 400px;
             padding: 20px;
             background-color: #fff;
@@ -47,8 +47,8 @@
         }
         .buttons {
             display: flex;
-            flex-direction: column;
-            gap: 10px;
+            flex-direction: column; /* Adjusted for smaller screens */
+            gap: 10px; /* Space between buttons */
             margin-top: 20px;
         }
         button {
@@ -73,21 +73,18 @@
         .forgot-btn:hover {
             background-color: #0056b3;
         }
-        .error-message {
-            color: red;
-            margin-top: 10px;
-            font-size: 14px;
-        }
+
+        /* Responsiveness */
         @media (max-width: 480px) {
             h2 {
-                font-size: 18px;
+                font-size: 18px; /* Smaller font for smaller screens */
             }
             input[type="text"], input[type="password"] {
-                font-size: 14px;
+                font-size: 14px; /* Adjust input font size */
             }
             button {
-                font-size: 14px;
-                padding: 8px 16px;
+                font-size: 14px; /* Adjust button font size */
+                padding: 8px 16px; /* Adjust button padding */
             }
         }
     </style>
@@ -95,24 +92,20 @@
 <body>
     <div class="login-container">
         <h2>GOAT Removals Login</h2>
-        <form method="POST" action="{{ url_for('login') }}">
+        <form method="POST" action="/login">
             <div class="input-group">
                 <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Enter your username" required>
+                <input type="text" id="username" name="username" required>
             </div>
             <div class="input-group">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Enter your password" required>
+                <input type="password" id="password" name="password" required>
             </div>
             <div class="buttons">
                 <button type="submit" class="login-btn">Login</button>
                 <button type="button" class="forgot-btn" onclick="window.location.href='/reset-password'">Forgot Password?</button>
             </div>
         </form>
-        <!-- Error Message Display -->
-        {% if message %}
-        <div class="error-message">{{ message }}</div>
-        {% endif %}
     </div>
 </body>
 </html>
