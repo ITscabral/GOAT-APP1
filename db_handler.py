@@ -3,27 +3,43 @@ import os
 from datetime import datetime
 
 class Database:
-    def __init__(self, db_path="timesheet.db"):
-        """Initialize the database connection and ensure schema updates."""
+    def __init__(self, db_path="/var/data/timesheet.db"):
+        """
+        Initialize the database connection and ensure schema updates.
+
+        Args:
+            db_path (str): The path to the SQLite database file.
+        """
         self.db_path = db_path
 
+        # Check if the database file exists
         if not os.path.exists(db_path):
             raise FileNotFoundError(f"Database file '{db_path}' not found.")
 
+        # Connect to the database and ensure schema is up-to-date
         self.connect_db()
         self.ensure_schema_updates()
 
     def connect_db(self):
-        """Establish connection to the SQLite database."""
+        """Establish a connection to the SQLite database."""
         try:
             self.connection = sqlite3.connect(self.db_path, check_same_thread=False)
             self.connection.row_factory = sqlite3.Row
-            print("Connected to SQLite database successfully.")
+            print(f"Connected to SQLite database at '{self.db_path}'.")
         except sqlite3.Error as e:
             raise ConnectionError(f"Database connection error: {e}")
 
     def query(self, sql, params=()):
-        """Execute a SELECT query and return the results."""
+        """
+        Execute a SELECT query and return the results.
+
+        Args:
+            sql (str): The SQL query string.
+            params (tuple): Parameters for the query.
+
+        Returns:
+            list: The query results as a list of rows.
+        """
         try:
             with self.connection:
                 cursor = self.connection.execute(sql, params)
@@ -33,7 +49,16 @@ class Database:
             return []
 
     def execute(self, sql, params=()):
-        """Execute an INSERT/UPDATE/DELETE query."""
+        """
+        Execute an INSERT, UPDATE, or DELETE query.
+
+        Args:
+            sql (str): The SQL query string.
+            params (tuple): Parameters for the query.
+
+        Returns:
+            int: Number of rows affected.
+        """
         try:
             with self.connection:
                 cursor = self.connection.execute(sql, params)
@@ -46,25 +71,41 @@ class Database:
     def ensure_schema_updates(self):
         """Ensure all schema updates are applied, such as adding missing columns."""
         try:
-            self.add_sent_column()
+            self.add_column_if_not_exists(
+                table="invoices",
+                column="sent",
+                column_type="INTEGER DEFAULT 0"
+            )
         except sqlite3.Error as e:
             print(f"Error ensuring schema updates: {e}")
 
-    def add_sent_column(self):
-        """Add 'sent' column to invoices table if it does not exist."""
+    def add_column_if_not_exists(self, table, column, column_type):
+        """
+        Add a column to a table if it does not already exist.
+
+        Args:
+            table (str): The name of the table.
+            column (str): The name of the column to add.
+            column_type (str): The data type of the column.
+        """
         try:
             cursor = self.connection.cursor()
-            cursor.execute("PRAGMA table_info(invoices)")
+            cursor.execute(f"PRAGMA table_info({table})")
             columns = [info[1] for info in cursor.fetchall()]
-            if 'sent' not in columns:
-                cursor.execute("ALTER TABLE invoices ADD COLUMN sent INTEGER DEFAULT 0")
-                print("Added 'sent' column to invoices table.")
+            if column not in columns:
+                cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_type}")
+                print(f"Added column '{column}' to table '{table}'.")
                 self.connection.commit()
         except sqlite3.Error as e:
-            print(f"Error adding 'sent' column: {e}")
+            print(f"Error adding column '{column}' to table '{table}': {e}")
 
     def get_next_invoice_number(self):
-        """Get the next available invoice number."""
+        """
+        Get the next available invoice number.
+
+        Returns:
+            int: The next invoice number.
+        """
         try:
             sql = "SELECT COALESCE(MAX(invoice_number), 0) + 1 AS next_id FROM invoices"
             result = self.query(sql)
@@ -74,12 +115,23 @@ class Database:
             return 1
 
     def save_invoice(self, invoice_number, username, total_hours, total_payment, filename):
-        """Save the invoice details to the invoices table."""
+        """
+        Save the invoice details to the invoices table.
+
+        Args:
+            invoice_number (int): The invoice number.
+            username (str): The username associated with the invoice.
+            total_hours (float): The total hours worked.
+            total_payment (float): The total payment.
+            filename (str): The file name of the invoice.
+        """
         try:
-            print(f"Saving invoice {invoice_number} for user {username}")
+            print(f"Saving invoice {invoice_number} for user '{username}'...")
             self.execute(
-                "INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                """
+                INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
                 (invoice_number, username, datetime.now().strftime("%Y-%m-%d"), total_hours, total_payment, filename, 0)
             )
             print("Invoice saved successfully.")
@@ -87,7 +139,12 @@ class Database:
             print(f"Error saving invoice: {e}")
 
     def mark_invoice_as_sent(self, invoice_number):
-        """Mark an invoice as sent."""
+        """
+        Mark an invoice as sent.
+
+        Args:
+            invoice_number (int): The invoice number to mark as sent.
+        """
         try:
             sql = "UPDATE invoices SET sent = 1 WHERE invoice_number = ?"
             rows_updated = self.execute(sql, (invoice_number,))
@@ -99,8 +156,10 @@ class Database:
             print(f"Error marking invoice as sent: {e}")
 
     def __del__(self):
-        """Close the database connection."""
+        """Close the database connection when the object is deleted."""
         try:
-            self.connection.close()
+            if hasattr(self, "connection") and self.connection:
+                self.connection.close()
+                print("Database connection closed.")
         except AttributeError:
             pass
