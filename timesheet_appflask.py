@@ -276,8 +276,8 @@ def generate_invoice_route():
 
     try:
         conn = get_db_connection()
-        
-        # Fetch time entries for the user
+
+        # Fetch time entries
         entries = conn.execute(
             'SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
             (username,)
@@ -287,7 +287,7 @@ def generate_invoice_route():
             app.logger.info(f"No time entries found for user {username}")
             return jsonify({'error': 'No time entries found for this user'}), 400
 
-        # Prepare invoice data
+        # Invoice data
         invoice_date = datetime.now().strftime("%Y-%m-%d")
         invoice_number = conn.execute(
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
@@ -308,11 +308,12 @@ def generate_invoice_route():
             "Phone": "+61 2 1234 5678"
         }, timesheet_data, total_hours)
 
+        # Check if the file exists
         if not filepath or not os.path.exists(filepath):
             app.logger.error(f"Invoice generation failed. File not found: {filepath}")
             return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
 
-        # Save invoice details in the database
+        # Save to database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
