@@ -87,69 +87,11 @@ def initialize_db():
 # Call the function to initialize the database
 initialize_db()
 
-@app.route('/')
-def home():
-    return render_template('index.html')
-
-@app.route('/login', methods=['POST'])
-def login():
-    try:
-        # Retrieve and normalize form inputs
-        username = request.form.get('username')
-        password = request.form.get('password')
-
-        if not username or not password:
-            return jsonify({'message': 'Username and password are required'}), 400
-
-        # Normalize username
-        normalized_username = username.strip().lower().replace(" ", "")
-
-        # Debugging: Log inputs
-        app.logger.info(f"Login attempt for username: {normalized_username}")
-
-        # Connect to the database
-        conn = get_db_connection()
-
-        # SQL query to find the user
-        query = """
-            SELECT role FROM users 
-            WHERE LOWER(REPLACE(username, ' ', '')) = ? AND password = ?
-        """
-        user = conn.execute(query, (normalized_username, password)).fetchone()
-
-        # Close the database connection
-        conn.close()
-
-        # Process the result
-        if user:
-            role = user['role']
-            if role == 'admin':
-                return redirect(url_for('admin_dashboard'))
-            elif role == 'employee':
-                return redirect(url_for('employee_dashboard', username=normalized_username))
-        else:
-            app.logger.warning(f"Invalid credentials for username: {normalized_username}")
-            return jsonify({'message': 'Invalid credentials'}), 401
-
-    except sqlite3.Error as e:
-        # Handle database errors
-        app.logger.error(f"Database error during login: {e}")
-        return jsonify({'error': f"Database error during login: {e}"}), 500
-
-    except Exception as e:
-        # Handle unexpected errors
-        app.logger.error(f"Unexpected error: {e}")
-        return jsonify({'error': f"Unexpected error: {e}"}), 500
-
-
-        
-
-
-
 def get_db_connection():
+    # Correct path to the database file
     db_path = '/var/data/timesheet.db'
 
-    # Ensure the database file exists
+    # Check if the database file exists
     if not os.path.exists(db_path):
         raise FileNotFoundError(f"Database file not found at {db_path}")
 
@@ -162,8 +104,70 @@ def get_db_connection():
         raise RuntimeError(f"Failed to connect to the database: {e}")
 
 
+@app.route('/')
+def home():
+    return render_template('index.html')
 
-        
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        # Retrieve input data
+        username = request.form.get('username')
+        password = request.form.get('password')
+
+        # Validate input
+        if not username or not password:
+            app.logger.error("Username or password is missing.")
+            return jsonify({'message': 'Username and password are required'}), 400
+
+        # Normalize username
+        normalized_username = username.strip().lower().replace(" ", "")
+
+        # Log input normalization
+        app.logger.info(f"Normalized username: {normalized_username}")
+
+        # Connect to the database
+        conn = get_db_connection()
+
+        # Query the user
+        query = """
+            SELECT role, password 
+            FROM users 
+            WHERE LOWER(REPLACE(username, ' ', '')) = ?
+        """
+        app.logger.info("Executing database query for user login.")
+        user = conn.execute(query, (normalized_username,)).fetchone()
+        conn.close()
+
+        # Validate user existence
+        if user:
+            stored_password = user['password']
+            role = user['role']
+
+            # Validate password
+            if password == stored_password:  # Replace with hashed password check if implemented
+                app.logger.info(f"User '{normalized_username}' logged in as '{role}'.")
+                if role == 'admin':
+                    return redirect(url_for('admin_dashboard'))
+                elif role == 'employee':
+                    return redirect(url_for('employee_dashboard', username=normalized_username))
+            else:
+                app.logger.warning(f"Invalid password for user '{normalized_username}'.")
+                return jsonify({'message': 'Invalid credentials'}), 401
+        else:
+            app.logger.warning(f"User '{normalized_username}' not found.")
+            return jsonify({'message': 'Invalid credentials'}), 401
+
+    except sqlite3.Error as e:
+        app.logger.error(f"Database error during login: {e}")
+        return jsonify({'error': f"Database error during login: {e}"}), 500
+
+    except Exception as e:
+        app.logger.error(f"Unexpected error during login: {e}")
+        return jsonify({'error': f"Unexpected error: {e}"}), 500
+
+
+
 @app.route('/admin_dashboard')
 def admin_dashboard():
     conn = get_db_connection()
@@ -360,8 +364,8 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Process timesheet data
-        timesheet_data = [
+        # Process  data
+        _data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
             for entry in entries
@@ -380,7 +384,7 @@ def generate_invoice_route():
             app.logger.error(f"Invoice generation failed. File not found: {filepath}")
             return jsonify({'error': f"Invoice file not found at {filepath}"}), 500
 
-        # Save to database
+        # Save to database (Store only the filename)
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
@@ -392,7 +396,7 @@ def generate_invoice_route():
                 invoice_date,
                 total_hours,
                 total_hours * 30,
-                os.path.basename(filepath)
+                os.path.basename(filepath)  # Save only the filename
             )
         )
         conn.commit()
@@ -406,7 +410,6 @@ def generate_invoice_route():
 
     finally:
         conn.close()
-
 
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
