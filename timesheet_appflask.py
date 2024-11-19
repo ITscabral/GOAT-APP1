@@ -7,6 +7,10 @@ from db_handler import Database
 
 
 
+
+
+app = Flask(__name__)
+
 def ensure_invoice_directory():
     directory = "/tmp/invoices"
     if not os.path.exists(directory):
@@ -18,7 +22,6 @@ def ensure_invoice_directory():
 # Call the function to ensure the directory exists
 ensure_invoice_directory()
 
-app = Flask(__name__)
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
