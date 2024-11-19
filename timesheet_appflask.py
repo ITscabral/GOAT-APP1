@@ -6,8 +6,6 @@ from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
 
-
-
 app = Flask(__name__)
 
 def ensure_invoice_directory():
@@ -20,8 +18,6 @@ def ensure_invoice_directory():
 
 # Ensure invoice directory exists
 ensure_invoice_directory()
-
-
 
 # Initialize the database and create tables if they don't exist
 def initialize_db():
@@ -70,9 +66,6 @@ def initialize_db():
 # Ensure database is initialized
 initialize_db()
 
-
-
-
 def get_db_connection():
     db_path = '/var/data/timesheet.db'
     if not os.path.exists(db_path):
@@ -85,6 +78,45 @@ def get_db_connection():
 def home():
     return render_template('index.html')
 
+# Route to delete an invoice
+@app.route('/delete_invoice', methods=['POST'])
+def delete_invoice():
+    invoice_number = request.form.get('invoice_number')
+    if not invoice_number:
+        return jsonify({'error': 'Invoice number is required.'}), 400
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # Retrieve the invoice file name before deletion
+        invoice_data = cursor.execute(
+            'SELECT filename FROM invoices WHERE invoice_number = ?',
+            (invoice_number,)
+        ).fetchone()
+
+        if not invoice_data:
+            return jsonify({'error': 'Invoice not found.'}), 404
+
+        file_name = invoice_data['filename']
+        file_path = os.path.join("/var/data/invoices", file_name)
+
+        # Delete invoice record from the database
+        cursor.execute('DELETE FROM invoices WHERE invoice_number = ?', (invoice_number,))
+        conn.commit()
+
+        # Delete the invoice file if it exists
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        conn.close()
+        return jsonify({'message': 'Invoice deleted successfully!'}), 200
+
+    except sqlite3.Error as e:
+        return jsonify({'error': f"Database error during deletion: {e}"}), 500
+
+    except Exception as e:
+        return jsonify({'error': f"Unexpected error: {e}"}), 500
 @app.route('/login', methods=['POST'])
 def login():
     try:
