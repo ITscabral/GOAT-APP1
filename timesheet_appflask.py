@@ -340,10 +340,12 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
+        # Define the filepath in the persistent directory
         directory = "/var/data/invoices"
         filepath = os.path.join(directory, f"Invoice_{invoice_number}_{username}.pdf")
         os.makedirs(directory, exist_ok=True)
 
+        # Prepare invoice data
         timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
@@ -351,12 +353,14 @@ def generate_invoice_route():
         ]
         total_hours = sum(entry[3] for entry in timesheet_data)
 
+        # Generate the invoice
         generate_invoice(invoice_number, username, {
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
             "Phone": "+61 2 1234 5678"
         }, timesheet_data, total_hours, filepath)
 
+        # Save invoice details to the database
         conn.execute(
             """
             INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
@@ -373,11 +377,12 @@ def generate_invoice_route():
         )
         conn.commit()
         conn.close()
+
         return send_file(filepath, as_attachment=True)
 
     except Exception as e:
         return jsonify({'error': f"Failed to generate invoice: {str(e)}"}), 500
-
+        
 
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
