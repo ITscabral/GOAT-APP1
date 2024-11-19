@@ -1,11 +1,10 @@
+
 from flask import Flask, render_template, request, redirect, url_for, jsonify, send_file, send_from_directory, abort
 import sqlite3
 import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
 from db_handler import Database
-
-
 
 
 
@@ -80,7 +79,15 @@ def initialize_db():
 initialize_db()
 
 def get_db_connection():
-    conn = sqlite3.connect('timesheet.db', check_same_thread=False)
+    # Ensure the persistent directory is correctly specified
+    db_path = '/var/data/timesheet.db'
+
+    # Check if the database file exists
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"Database file not found at {db_path}")
+
+    # Connect to the SQLite database
+    conn = sqlite3.connect(db_path, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
