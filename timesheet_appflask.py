@@ -315,13 +315,20 @@ def generate_invoice_route():
 
         # Save to database
         conn.execute(
-            """
-            INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
-            VALUES (?, ?, ?, ?, ?, ?, 0)
-            """,
-            (invoice_number, username, invoice_date, total_hours, total_hours * 30, filepath)
+        """
+        INSERT INTO invoices (invoice_number, username, date, total_hours, total_payment, filename, sent)
+        VALUES (?, ?, ?, ?, ?, ?, 0)
+        """,
+        (
+            invoice_number,
+            username,
+            invoice_date,
+            total_hours,
+            total_hours * 30,
+            f"Invoice_{invoice_number}_{username}.pdf"  # Store only the filename
         )
-        conn.commit()
+    )
+    conn.commit()
 
         app.logger.info(f"Invoice {invoice_number} generated successfully for user {username}")
         return send_file(filepath, as_attachment=True)
