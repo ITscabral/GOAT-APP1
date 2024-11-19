@@ -129,6 +129,7 @@
                 <td>{{ invoice.total_hours }}</td>
                 <td>${{ invoice.total_payment }}</td>
                 <td>
+                    <!-- Use only the filename in the URL -->
                     <a href="{{ url_for('download_invoice', filename=invoice.filename) }}" class="btn btn-link" target="_blank">Open PDF</a>
                 </td>
             </tr>
