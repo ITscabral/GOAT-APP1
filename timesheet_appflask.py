@@ -3,7 +3,6 @@ import sqlite3
 import os
 from datetime import datetime, timedelta
 from invoice_generator import generate_invoice
-from db_handler import Database
 
 app = Flask(__name__)
 
@@ -32,7 +31,8 @@ def initialize_db():
             username TEXT PRIMARY KEY,
             password TEXT NOT NULL,
             role TEXT NOT NULL,
-            phone_number TEXT
+            phone_number TEXT,
+            rate_per_hour REAL DEFAULT 30
         )
     ''')
 
@@ -303,6 +303,19 @@ def generate_invoice_route():
 
     try:
         conn = get_db_connection()
+
+        # Get employee's hourly rate
+        employee_data = conn.execute(
+            'SELECT rate_per_hour FROM users WHERE LOWER(REPLACE(username, " ", "")) = ?',
+            (username,)
+        ).fetchone()
+
+        if not employee_data:
+            return jsonify({'error': 'User not found'}), 404
+
+        rate_per_hour = employee_data['rate_per_hour']
+
+        # Get employee time entries
         entries = conn.execute(
             'SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
             (username,)
@@ -336,6 +349,8 @@ def generate_invoice_route():
             "Phone": "+61 2 1234 5678"
         }, timesheet_data, total_hours, filepath)
 
+        total_payment = total_hours * rate_per_hour
+
         # Save invoice details to the database
         conn.execute(
             """
@@ -347,7 +362,7 @@ def generate_invoice_route():
                 username,
                 invoice_date,
                 total_hours,
-                total_hours * 30,
+                total_payment,
                 os.path.basename(filepath)
             )
         )
