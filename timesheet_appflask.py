@@ -317,6 +317,18 @@ def generate_invoice_route():
     try:
         conn = get_db_connection()
 
+        # Fetch the hourly rate for the user
+        user_data = conn.execute(
+            'SELECT hourly_rate FROM users WHERE LOWER(REPLACE(username, " ", "")) = ?',
+            (username,)
+        ).fetchone()
+
+        if not user_data:
+            app.logger.info(f"No user found with username {username}")
+            return jsonify({'error': 'User not found'}), 400
+
+        hourly_rate = user_data['hourly_rate']
+
         # Fetch time entries
         entries = conn.execute(
             'SELECT date, start_time, end_time FROM time_entries WHERE LOWER(REPLACE(username, " ", "")) = ?',
@@ -333,8 +345,8 @@ def generate_invoice_route():
             'SELECT COALESCE(MAX(invoice_number), 0) + 1 FROM invoices'
         ).fetchone()[0]
 
-        # Process  data
-        _data = [
+        # Process data
+        timesheet_data = [
             (entry['date'], entry['start_time'], entry['end_time'],
              round((datetime.strptime(entry['end_time'], "%H:%M") - datetime.strptime(entry['start_time'], "%H:%M") - timedelta(minutes=30)).seconds / 3600.0, 2))
             for entry in entries
@@ -346,7 +358,7 @@ def generate_invoice_route():
             "Company Name": "GOAT Removals",
             "Address": "19 O'Neile Crescent, NSW, 2170, Australia",
             "Phone": "+61 2 1234 5678"
-        }, timesheet_data, total_hours)
+        }, timesheet_data, total_hours, hourly_rate)
 
         # Check if the file exists
         if not filepath or not os.path.exists(filepath):
@@ -364,7 +376,7 @@ def generate_invoice_route():
                 username,
                 invoice_date,
                 total_hours,
-                total_hours * 30,
+                total_hours * hourly_rate,
                 os.path.basename(filepath)  # Save only the filename
             )
         )
@@ -379,7 +391,6 @@ def generate_invoice_route():
 
     finally:
         conn.close()
-
 
 @app.route('/employee_invoices/<username>', methods=['GET'])
 def employee_invoices(username):
